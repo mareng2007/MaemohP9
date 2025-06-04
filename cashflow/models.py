@@ -78,6 +78,10 @@ class ITDLoan(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='itdloan_created')
     created_on = models.DateField(default=timezone.now)
 
+    def remaining_balance(self):
+        """Return remaining credit available on this ITDLoan."""
+        return self.total_amount - self.used_amount
+
     def __str__(self):
         return f"{self.loan_name} (Total {self.total_amount} / Used {self.used_amount})"
 
