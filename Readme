@@ -978,3 +978,7 @@ The project now includes scheduled scraping tasks using BeautifulSoup to gather
 exchange rates and interest rates. Results are stored in the new
 `ExchangeRate` and `InterestRate` models.
 
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](./LICENSE) for details.
