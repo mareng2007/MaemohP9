@@ -17,6 +17,7 @@ from core.mixins import RevenueAccessRequiredMixin
 
 from .models import RevenueJob, AccountsReceivable
 from .forms import RevenueJobForm, AccountsReceivableForm
+from .filters import RevenueJobFilter, AccountsReceivableFilter
 from .serializers import RevenueJobSerializer, AccountsReceivableSerializer
 
 
@@ -61,6 +62,17 @@ class RevenueJobListView(RevenueAccessRequiredMixin, ListView):
     model = RevenueJob
     template_name = 'revenue/revenuejob_list.html'
     context_object_name = 'jobs'
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = RevenueJob.objects.all().order_by('-date')
+        self.filterset = RevenueJobFilter(self.request.GET, queryset=qs)
+        return self.filterset.qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter'] = self.filterset
+        return context
 
 
 class RevenueJobCreateView(RevenueAccessRequiredMixin, CreateView):
@@ -104,6 +116,17 @@ class AccountsReceivableListView(RevenueAccessRequiredMixin, ListView):
     model = AccountsReceivable
     template_name = 'revenue/accountsreceivable_list.html'
     context_object_name = 'ars'
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = AccountsReceivable.objects.select_related('revenue_job').all().order_by('-invoice_date')
+        self.filterset = AccountsReceivableFilter(self.request.GET, queryset=qs)
+        return self.filterset.qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter'] = self.filterset
+        return context
 
 
 class AccountsReceivableCreateView(RevenueAccessRequiredMixin, CreateView):
