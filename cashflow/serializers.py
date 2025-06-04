@@ -91,10 +91,24 @@ class PNLoanUsageSerializer(serializers.ModelSerializer):
 # —— ITDLoan ——
 #
 class ITDLoanSerializer(serializers.ModelSerializer):
+    remaining_balance = serializers.SerializerMethodField()
+
     class Meta:
         model = ITDLoan
-        fields = ['id', 'loan_name', 'total_amount', 'received_amount', 'used_amount', 'created_by', 'created_on']
-        read_only_fields = ['created_by', 'created_on']
+        fields = [
+            'id',
+            'loan_name',
+            'total_amount',
+            'received_amount',
+            'used_amount',
+            'remaining_balance',
+            'created_by',
+            'created_on'
+        ]
+        read_only_fields = ['created_by', 'created_on', 'remaining_balance']
+
+    def get_remaining_balance(self, obj):
+        return obj.remaining_balance()
 
     def create(self, validated_data):
         # บันทึกผู้ใช้งานปัจจุบันเป็น created_by

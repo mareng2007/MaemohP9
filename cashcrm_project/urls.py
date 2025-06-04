@@ -32,21 +32,21 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
     # API endpoints ของแต่ละแอป
-    path('api/core/', include('core.urls', namespace='core-api')),           # เช่น /api/core/users/
-    path('api/revenue/', include('revenue.urls', namespace='revenue-api')),  # เช่น /api/revenue/jobs/
-    # path('api/loans/', include('loans.urls', namespace='loans-api')),
-    # path('api/payables/', include('payables.urls', namespace='payables-api')),
-    # path('api/cashflow/', include('cashflow.urls', namespace='cashflow-api')),
-    # path('api/fleet/', include('fleet.urls', namespace='fleet-api')),
-    # path('api/mineprogress/', include('mineprogress.urls', namespace='mineprogress-api')),
+    path('api/core/', include('core.urls', namespace='core-api')),
+    path('api/revenue/', include('revenue.urls', namespace='revenue-api')),
+    path('api/loans/', include('loans.urls', namespace='loans-api')),
+    path('api/payables/', include('payables.urls', namespace='payables-api')),
+    path('api/cashflow/', include('cashflow.urls', namespace='cashflow-api')),
+    path('api/fleet/', include('fleet.urls', namespace='fleet-api')),
+    path('api/mineprogress/', include('mineprogress.urls', namespace='mineprogress-api')),
     
     # Frontend URLs ของแต่ละแอป (Web)
     path('revenue/', include('revenue.urls', namespace='revenue')),
-    # path('loans/', include('loans.urls', namespace='loans')),
-    # path('payables/', include('payables.urls', namespace='payables')),
-    # path('cashflow/', include('cashflow.urls', namespace='cashflow')),
-    # path('fleet/', include('fleet.urls', namespace='fleet')),
-    # path('mineprogress/', include('mineprogress.urls', namespace='mineprogress')),
+    path('loans/', include('loans.urls', namespace='loans')),
+    path('payables/', include('payables.urls', namespace='payables')),
+    path('cashflow/', include('cashflow.urls', namespace='cashflow')),
+    path('fleet/', include('fleet.urls', namespace='fleet')),
+    path('mineprogress/', include('mineprogress.urls', namespace='mineprogress')),
 ]
 
 # เสิร์ฟ media ไฟล์เฉพาะตอน DEBUG
