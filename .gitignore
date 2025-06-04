@@ -1,0 +1,44 @@
+# Byte-compiled / cache files
+__pycache__/
+migrations
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+BG_Envs/
+venv/
+.venv/
+
+# Environment variables
+.env
+
+# Node.js dependencies
+node_modules/
+
+# Media uploads (user‐generated files)
+media/
+
+# Database files
+*.sqlite3
+
+# Log files
+*.log
+debug.log
+
+# Build artifacts (e.g. frontend builds, distribution packages)
+build/
+dist/
+
+# IDE / editor folders and files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Tortoise ORM metadata
+*.tortoise
+
+# OS‐generated files
+.DS_Store
+Thumbs.db
