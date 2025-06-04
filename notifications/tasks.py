@@ -4,6 +4,9 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import Notification
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -42,8 +45,8 @@ def send_notification(user_id: int, title: str, message: str, channel: str):
                     headers=headers,
                     timeout=10,
                 )
-            except Exception:
-                pass
+            except requests.RequestException:
+                logger.exception("LINE notification failed")
 
     Notification.objects.create(
         user=user,
