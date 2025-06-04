@@ -59,6 +59,12 @@ class AccountsReceivable(models.Model):
     due_date = models.DateField()
     total_amount = models.DecimalField(max_digits=14, decimal_places=2)
     paid_amount = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'))
+    bank_account = models.ForeignKey(
+        'cashflow.BankAccount',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
     status = models.CharField(
         max_length=20,
         choices=[
