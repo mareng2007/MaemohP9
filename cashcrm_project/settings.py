@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'cashflow',
     'fleet',
     'mineprogress',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -294,6 +295,10 @@ CELERY_BEAT_SCHEDULE = {
     'check_lcrequests_expiry': {
         'task': 'cashflow.tasks.check_lcrequests_expiry',
         'schedule': crontab(hour=1, minute=0),
+    },
+    'monthly_important_notifications': {
+        'task': 'notifications.tasks.monthly_important_notifications',
+        'schedule': crontab(hour=8, minute=0, day_of_month=1),
     },
 }
 
