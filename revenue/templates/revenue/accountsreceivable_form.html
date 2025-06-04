@@ -70,6 +70,12 @@
           </div>
         </div>
 
+        <div class="mb-3">
+          {{ form.bank_account.label_tag }}
+          {{ form.bank_account }}
+          {{ form.bank_account.errors }}
+        </div>
+
         <button type="submit" class="btn btn-success">
           {% if object %}บันทึก{% else %}สร้างใหม่{% endif %}
         </button>

@@ -19,7 +19,7 @@ class AccountsReceivableSerializer(serializers.ModelSerializer):
         model = AccountsReceivable
         fields = [
             'id', 'revenue_job', 'invoice_number', 'invoice_date',
-            'due_date', 'total_amount', 'paid_amount', 'status'
+            'due_date', 'total_amount', 'paid_amount', 'bank_account', 'status'
         ]
 
     def create(self, validated_data):

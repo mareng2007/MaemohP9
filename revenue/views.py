@@ -149,6 +149,7 @@ class AccountsReceivableUpdateView(RevenueAccessRequiredMixin, UpdateView):
         old_ar = AccountsReceivable.objects.get(pk=ar_obj.pk)
         old_paid = old_ar.paid_amount
         new_paid = form.cleaned_data.get('paid_amount')
+        ar_obj.bank_account = form.cleaned_data.get('bank_account')
 
         # ถ้า paid_amount มีการปรับขึ้นจนถึงยอดครบ (หรือบางส่วน) → อัปเดตสถานะของ AR
         if new_paid >= ar_obj.total_amount:
@@ -162,11 +163,9 @@ class AccountsReceivableUpdateView(RevenueAccessRequiredMixin, UpdateView):
 
         # ถ้ามีการเพิ่ม paid_amount (เงินเข้าจริง) ให้สร้าง CashTransaction (inflow) ใน cashflow
         if new_paid > old_paid:
-            from cashflow.models import CashTransaction, BankAccount
+            from cashflow.models import CashTransaction
             from datetime import date
 
-            # สมมติว่าต้องเลือก bank account จากฟอร์มด้วย ถ้าไม่มี → ให้เป็น None
-            bank_acc = form.cleaned_data.get('bank_account', None)
             CashTransaction.objects.create(
                 transaction_date = date.today(),
                 transaction_type = 'Revenue_Paid',  # ประเภท transaction
@@ -174,7 +173,7 @@ class AccountsReceivableUpdateView(RevenueAccessRequiredMixin, UpdateView):
                 amount = new_paid - old_paid,       # จำนวนเงินที่รับเข้ามาในรอบนี้
                 is_inflow = True,
                 description = f"Income received for AR {ar_obj.invoice_number}",
-                bank_account = bank_acc
+                bank_account = ar_obj.bank_account
             )
         return redirect(self.success_url)
 

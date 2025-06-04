@@ -25,7 +25,7 @@ class AccountsReceivableForm(forms.ModelForm):
         fields = [
             'revenue_job', 'invoice_number',
             'invoice_date', 'due_date',
-            'total_amount', 'paid_amount', 'status'
+            'total_amount', 'paid_amount', 'bank_account', 'status'
         ]
         widgets = {
             'revenue_job': forms.Select(attrs={'class': 'form-select'}),
@@ -34,5 +34,6 @@ class AccountsReceivableForm(forms.ModelForm):
             'due_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'total_amount': forms.NumberInput(attrs={'class': 'form-control'}),
             'paid_amount': forms.NumberInput(attrs={'class': 'form-control'}),
+            'bank_account': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
         }
