@@ -954,5 +954,20 @@
        'task'    : 'cashflow.tasks.check_lcrequests_expiry',
        'schedule': crontab(hour=1, minute=0),
      },
-   }
+  }
+
+## Environment Variables
+
+The application relies on several environment variables which can be defined in
+a `.env` file or exported in the shell. At a minimum the following variables are
+required:
+
+- `SECRET_KEY` – Django secret key value.
+- `DEBUG` – set to `1` to enable debug mode.
+- `ALLOWED_HOSTS` – comma separated list of allowed hostnames.
+- `DB_NAME` – PostgreSQL database name.
+- `DB_USER` – database username.
+- `DB_PASSWORD` – database password.
+- `DB_HOST` – database host address.
+- `DB_PORT` – database port number.
 
