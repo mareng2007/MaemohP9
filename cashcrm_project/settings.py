@@ -60,6 +60,8 @@ INSTALLED_APPS = [
     'fleet',
     'mineprogress',
     'notifications',
+    'payments',
+    'documents',
 ]
 
 MIDDLEWARE = [
@@ -172,6 +174,7 @@ TIME_ZONE = 'Asia/Bangkok'
 
 USE_I18N = True
 USE_L10N = True
+LOCALE_PATHS = [BASE_DIR / 'locale']
 
 USE_TZ = True
 
@@ -299,6 +302,14 @@ CELERY_BEAT_SCHEDULE = {
     'monthly_important_notifications': {
         'task': 'notifications.tasks.monthly_important_notifications',
         'schedule': crontab(hour=8, minute=0, day_of_month=1),
+    },
+    'daily_exchange_rates': {
+        'task': 'core.tasks.scrape_exchange_rates',
+        'schedule': crontab(hour=6, minute=0),
+    },
+    'daily_interest_rates': {
+        'task': 'core.tasks.scrape_interest_rates',
+        'schedule': crontab(hour=6, minute=30),
     },
 }
 

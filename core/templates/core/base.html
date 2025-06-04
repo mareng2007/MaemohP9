@@ -1,6 +1,7 @@
 {# D:\Django\MaemohP9\core\templates\core\base.html #}
 {% load static %}
 {% load group_tags %}
+{% load i18n %}
 
 <!DOCTYPE html>
 <html lang="th">
@@ -221,6 +222,7 @@
   {% block extra-css %}{% endblock %}
 </head>
 <body>
+  <p>{{ _('welcome') }}</p>
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg navbar-custom sticky-top py-3">
     <div class="container">
