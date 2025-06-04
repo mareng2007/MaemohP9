@@ -20,6 +20,7 @@ cron-descriptor==1.4.5
 Django==4.2.21
 django-celery-beat==2.8.1
 django-cors-headers==4.4.0
+django-filter==23.5
 django-smtp-ssl==1.0
 django-timezone-field==7.1
 djangorestframework==3.15.2

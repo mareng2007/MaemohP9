@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'django_celery_beat',
     'corsheaders',
+    'django_filters',
 
     # แอปภายในโปรเจกต์
     'core',     # core_02 (Dashboard, Permissions ใหม่)
