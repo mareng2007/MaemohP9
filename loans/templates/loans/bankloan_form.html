@@ -1,0 +1,33 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if bankloan %}Edit Bank Loan{% else %}New Bank Loan{% endif %}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2>{% if bankloan %}Edit{% else %}Create{% endif %} Bank Loan</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+      <label for="id_loan_type" class="form-label">Loan Type</label>
+      {{ form.loan_type }}
+      {{ form.loan_type.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_agreement_date" class="form-label">Agreement Date</label>
+      {{ form.agreement_date }}
+      {{ form.agreement_date.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_principal_amount" class="form-label">Principal Amount</label>
+      {{ form.principal_amount }}
+      {{ form.principal_amount.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_interest_rate" class="form-label">Interest Rate (%)</label>
+      {{ form.interest_rate }}
+      {{ form.interest_rate.errors }}
+    </div>
+    <button type="submit" class="btn btn-primary">{% if bankloan %}Update{% else %}Create{% endif %}</button>
+    <a href="{% url 'bankloan-list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if vendor %}Edit Vendor{% else %}New Vendor{% endif %}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2>{% if vendor %}Edit{% else %}Create{% endif %} Vendor</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+      <label for="id_name" class="form-label">Name</label>
+      {{ form.name }}
+      {{ form.name.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_category" class="form-label">Category</label>
+      {{ form.category }}
+      {{ form.category.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_payment_terms" class="form-label">Payment Terms</label>
+      {{ form.payment_terms }}
+      {{ form.payment_terms.errors }}
+      <div class="form-text">เช่น “30D” หรือ “60D”</div>
+    </div>
+    <div class="mb-3">
+      <label for="id_tax_withholding_percent" class="form-label">Tax Withholding (%)</label>
+      {{ form.tax_withholding_percent }}
+      {{ form.tax_withholding_percent.errors }}
+    </div>
+    <button type="submit" class="btn btn-primary">{% if vendor %}Update{% else %}Create{% endif %}</button>
+    <a href="{% url 'vendor-list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Revenue Jobs{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="section-title">รายการ Revenue Jobs</h2>
+    <a href="{% url 'revenue:revenuejob-create' %}" class="btn btn-primary">
+      <i class="fas fa-plus-circle me-1"></i> สร้างใหม่
+    </a>
+  </div>
+
+  <table class="table table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>วันที่</th>
+        <th>Job Code</th>
+        <th>รายละเอียด (รายการ)</th>
+        <th>Volume</th>
+        <th>จำนวนเงิน</th>
+        <th>สถานะ</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+        <tr>
+          <td>{{ job.date }}</td>
+          <td>{{ job.get_job_code_display }}</td>
+          <td>{{ job.description }}</td>
+          <td>{{ job.volume|floatformat:2 }}</td>
+          <td>{{ job.income_amount|floatformat:2 }}</td>
+          <td>
+            {% if job.status == 'Pending' %}
+              <span class="badge bg-secondary">Pending</span>
+            {% elif job.status == 'Requested_PN' %}
+              <span class="badge bg-info">Requested PN</span>
+            {% elif job.status == 'Invoiced' %}
+              <span class="badge bg-warning text-dark">Invoiced</span>
+            {% elif job.status == 'Paid' %}
+              <span class="badge bg-success">Paid</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'revenue:revenuejob-detail' job.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{% url 'revenue:revenuejob-update' job.pk %}" class="btn btn-sm btn-outline-warning">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted">ยังไม่มีข้อมูล Revenue Jobs</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+

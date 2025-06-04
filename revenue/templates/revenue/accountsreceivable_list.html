@@ -1,0 +1,65 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Accounts Receivable{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="section-title">รายการ Accounts Receivable</h2>
+    <a href="{% url 'revenue:ar-create' %}" class="btn btn-primary">
+      <i class="fas fa-plus-circle me-1"></i> สร้างใหม่
+    </a>
+  </div>
+
+  <table class="table table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>AR#</th>
+        <th>Revenue Job</th>
+        <th>Invoice No.</th>
+        <th>Invoice Date</th>
+        <th>Due Date</th>
+        <th>Total Amount</th>
+        <th>Paid Amount</th>
+        <th>Status</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ar in ars %}
+        <tr>
+          <td>{{ ar.invoice_number }}</td>
+          <td>{{ ar.revenue_job.job_code }}</td>
+          <td>{{ ar.invoice_number }}</td>
+          <td>{{ ar.invoice_date }}</td>
+          <td>{{ ar.due_date }}</td>
+          <td>{{ ar.total_amount|floatformat:2 }}</td>
+          <td>{{ ar.paid_amount|floatformat:2 }}</td>
+          <td>
+            {% if ar.status == 'Unpaid' %}
+              <span class="badge bg-secondary">Unpaid</span>
+            {% elif ar.status == 'Partial' %}
+              <span class="badge bg-warning text-dark">Partial</span>
+            {% elif ar.status == 'Paid' %}
+              <span class="badge bg-success">Paid</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'revenue:ar-detail' ar.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{% url 'revenue:ar-update' ar.pk %}" class="btn btn-sm btn-outline-warning">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted">ยังไม่มีข้อมูล Accounts Receivable</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

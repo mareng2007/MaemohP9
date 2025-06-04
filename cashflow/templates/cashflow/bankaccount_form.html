@@ -1,0 +1,28 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if bankaccount %}Edit Bank Account{% else %}New Bank Account{% endif %}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2>{% if bankaccount %}Edit{% else %}Create{% endif %} Bank Account</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+      <label for="id_name" class="form-label">Account Name</label>
+      {{ form.name }}
+      {{ form.name.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_bank_name" class="form-label">Bank Name</label>
+      {{ form.bank_name }}
+      {{ form.bank_name.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_account_number" class="form-label">Account Number</label>
+      {{ form.account_number }}
+      {{ form.account_number.errors }}
+    </div>
+    <button type="submit" class="btn btn-primary">{% if bankaccount %}Update{% else %}Create{% endif %}</button>
+    <a href="{% url 'bankaccount-list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

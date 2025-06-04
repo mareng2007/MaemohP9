@@ -1,0 +1,29 @@
+{% extends 'core/base.html' %}
+{% block title %}Use ITD Funds{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2>Use ITD Loan Funds ({{ itdloan.loan_name }})</h2>
+  <p>Remaining Credit: ฿{{ itdloan.total_amount|floatformat:2 }} – ฿{{ itdloan.used_amount|floatformat:2 }} = ฿{{ itdloan.remaining_credit }}</p>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+      <label for="id_amount" class="form-label">Amount to Use</label>
+      {{ form.amount }}
+      {{ form.amount.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_bank_account" class="form-label">Bank Account</label>
+      {{ form.bank_account }}
+      {{ form.bank_account.errors }}
+    </div>
+    <div class="mb-3">
+      <label for="id_description" class="form-label">Description</label>
+      {{ form.description }}
+      {{ form.description.errors }}
+    </div>
+    <button type="submit" class="btn btn-primary">Use Funds</button>
+    <a href="{% url 'itdloan-list' %}" class="btn btn-secondary">Cancel</a>
+  </form>
+</div>
+{% endblock %}

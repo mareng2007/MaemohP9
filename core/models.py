@@ -1,0 +1,53 @@
+# D:\Django\MaemohP9\core\models.py
+
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+import uuid
+
+User = get_user_model()
+
+class UserProfile(models.Model):
+    """
+    เก็บข้อมูลเสริมของผู้ใช้ (optional)
+    เช่น รูปโปรไฟล์, ชื่อ-นามสกุล, เบอร์โทรศัพท์ ฯลฯ
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    first_name = models.CharField(max_length=50, blank=True, verbose_name="ชื่อ")
+    last_name = models.CharField(max_length=50, blank=True, verbose_name="นามสกุล")
+    phone_number = models.CharField(max_length=20, blank=True, verbose_name="เบอร์มือถือ")
+    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name="รูปโปรไฟล์")
+    # สามารถขยายฟิลด์ตามต้องการ
+
+    def __str__(self):
+        return f"Profile ของ {self.user.username}"
+
+
+class EmailActivation(models.Model):
+    """
+    เก็บโทเคนสำหรับยืนยันอีเมลของผู้ใช้
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='email_activations')
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expired_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"EmailActivation({self.user.username}, used={self.is_used})"
+
+
+class OTP(models.Model):
+    """
+    เก็บรหัส OTP สำหรับการล็อกอิน 2FA ทางอีเมล
+    """
+    # email = models.EmailField(verbose_name="อีเมล")     # เก็บอีเมลของผู้ใช้ที่ส่ง OTP ไป
+    email = models.EmailField(verbose_name="อีเมล", null=True, blank=True)
+    code = models.CharField(max_length=6, verbose_name="รหัส OTP")  # รหัส OTP 6 หลัก
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="เวลาสร้าง")
+    valid_until = models.DateTimeField(verbose_name="OTP หมดอายุ")   # เวลา OTP หมดอายุ (เช่น 5 นาทีหลังสร้าง)
+    is_used = models.BooleanField(default=False, verbose_name="ถูกใช้งานแล้ว")  # เช็กว่าเคยใช้ไปยัง
+
+    def __str__(self):
+        return f"{self.email} → {self.code} (Used: {self.is_used})"
+

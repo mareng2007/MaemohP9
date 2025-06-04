@@ -1,0 +1,958 @@
+# Workflow_00 (ภาพรวมเต็ม)
+
+> เอกสารนี้สรุปกระบวนการทำงานตั้งแต่ต้นจนจบ (End-to-End) ของระบบ Cash Flow โดยครอบคลุมตั้งแต่การจัดการผู้ใช้ (Registration) จนถึง Main Dashboard ที่แสดงสถานะทางการเงินทั้งหมด  
+> **เวอร์ชันปรับปรุงล่าสุด:** เพิ่มกรณี Suppliers ให้วงเงินเครดิต และปรับรายละเอียดในแต่ละขั้นตอนตามเงื่อนไขใหม่
+
+---
+
+## 1. ลงทะเบียนและจัดการผู้ใช้ (User Registration & Core)
+
+1. **สมัครสมาชิก (Register)**
+   - ผู้ใช้กรอกข้อมูลเบื้องต้น (Username / Password / Email)  
+   - สร้างบัญชี `User` โดยตั้ง `is_active=False` รอการยืนยันอีเมล  
+   - สร้าง `UserProfile` เปล่าสำหรับเก็บข้อมูลเพิ่มเติม (ชื่อ-นามสกุล, เบอร์โทร, รูปภาพ ฯลฯ)  
+   - เพิ่มผู้ใช้เข้า “Default Group” (เช่น `mineprogress_access`)  
+   - สร้างโทเค็น `EmailActivation` (หมดอายุภายใน 24 ชั่วโมง) แล้วส่งลิงก์ยืนยันทางอีเมล  
+
+2. **ยืนยันอีเมล (Activate)**
+   - ผู้ใช้คลิกลิงก์ยืนยันในอีเมล → ตรวจสอบ Token  
+   - ถ้าโทเค็นยังไม่หมดอายุ:  
+     1. อัปเดต `user.is_active = True`  
+     2. ส่งผู้ใช้ไปหน้า Login  
+
+3. **Login แบบ 2FA (Username/Password → OTP)**
+   - **ขั้นที่ 1 (Username/Password):**  
+     - ผู้ใช้กรอก Username + Password  
+     - ตรวจสอบ `is_active=True` (ล็อกอินเฉพาะผู้ที่ยืนยันอีเมลแล้ว)  
+     - สร้างรหัส OTP 6 หลัก (เก็บในโมเดล `OTP`) พร้อม `valid_until` (5 นาที)  
+     - ส่ง OTP ทางอีเมล แล้วเก็บ `user.pk` + `user.email` ใน session ชั่วคราว  
+     - นำผู้ใช้ไปหน้า “Verify OTP”  
+   - **ขั้นที่ 2 (Verify OTP):**  
+     - ผู้ใช้กรอกรหัส OTP ที่ได้รับ  
+     - ตรวจสอบว่าโค้ดยังไม่หมดอายุ (`valid_until`) และ `is_used=False`  
+     - ถ้าถูกต้อง → ลงชื่อเข้าใช้ (`auth_login(request, user)`) → ล้าง session ชั่วคราว  
+
+4. **แก้ไขโปรไฟล์ (Profile)**
+   - หลังล็อกอินครั้งแรก ผู้ใช้กรอกข้อมูลเพิ่มเติมใน `UserProfile`  
+     - ชื่อ-นามสกุล, เบอร์โทร (แปลงเป็นรูปแบบ E.164 อัตโนมัติ), รูปประจำตัว ฯลฯ  
+   - ผู้ใช้สามารถเปลี่ยนรหัสผ่านได้ภายในหน้าประวัติส่วนตัว  
+
+---
+
+## 2. Revenue → PNLoan (สร้างรายรับ → ขอสินเชื่อ PN)
+
+> **เพิ่มเงื่อนไขใหม่:**  
+> - **Suppliers บางรายให้วงเงินเครดิตกับหน่วยงาน** (เช่น 50 ล้านบาท)  
+>   - หากวงเงิน PNLoan, ITDLoan, LC หรือเงินสดไม่เพียงพอ สามารถเบิกจาก “วงเงินเครดิต Suppliers” ได้ทันที  
+>   - ต้องไม่เกินวงเงินเครดิต Suppliers แต่ละราย  
+>   - หลังใช้เต็มวงเงิน Suppliers ต้องชำระยอด (อาจใช้วงเงิน PNLoan, ITDLoan, LC, หรือเงินสดมาจ่าย)  
+
+1. **สร้าง RevenueJob**  
+   - กลุ่มผู้ใช้ `revenue_access` สร้าง `RevenueJob`  
+     - **ฟิลด์ใหม่:**  
+       - `description` (TextField): ใช้อธิบายว่าเป็นผลงานของเดือนอะไร หรือบันทึกข้อความอธิบายเพิ่มเติม  
+       - `job_code` (CharField):  
+         - เพิ่มตัวเลือก “Revenue_DieselSale” (รายได้จากการขายน้ำมันดีเซล)  
+         - เพิ่มตัวเลือก “Revenue_Other” (รายได้อื่นๆ)  
+     - ฟิลด์หลักอื่น ๆ:  
+       - `date` (Date; ค่าเริ่มต้น = วันนี้)  
+       - `volume` (Decimal; ปริมาณหน่วยงาน ถ้ามี)  
+       - `income_amount` (Decimal; จำนวนเงินรายได้)  
+       - `status` (CharField; ค่าเริ่มต้น = `Pending`)  
+   - **เงื่อนไข:**  
+     - หาก `job_code == 'Job1'` (ภาคเหมืองหลัก) → ต้องสร้าง `PostFinanceFacility` ก่อน (ดูขั้นตอนถัดไป)  
+
+2. **กรณี Job1 ต้องขอวงเงิน Post Finance ก่อน**
+   - เมื่อสร้าง `RevenueJob` ที่ `job_code='Job1'` → กลุ่ม `cashflow_access` สร้าง `PostFinanceFacility`  
+     - ฟิลด์หลัก:  
+       - `facility_name`  
+       - `start_date` / `end_date`  
+       - `credit_limit` (วงเงินสูงสุด)  
+       - `used_amount` (เริ่มต้น = 0)  
+       - `created_by` (อัตโนมัติ = ผู้ใช้ปัจจุบัน)  
+       - `approved_on` (วันอนุมัติจากธนาคาร; ค่าเริ่มต้น = null)  
+   - รอธนาคารอนุมัติ → เมื่อธนาคารอนุมัติ → กำหนดวันที่ `approved_on`  
+
+3. **สร้าง PNLoanUsage**
+   - เงื่อนไข:  
+     - ต้องมี `PostFinanceFacility` ที่ธนาคารอนุมัติแล้ว (`approved_on != null`)  
+     - **Approved Amount** กำหนดเป็น **80% ของ `income_amount`** (ธนาคารกำหนดยอดให้ยืม 80% ของยอดงาน)  
+   - กลุ่ม `cashflow_access` สร้าง `PNLoanUsage`  
+     - ฟิลด์หลัก:  
+       - `facility` (FK → PostFinanceFacility)  
+       - `revenue_job` (FK → RevenueJob)  
+       - `date` (Date; ค่าเริ่มต้น = วันนี้)  
+       - `approved_amount` (Decimal; 80% ของ `revenue_job.income_amount`)  
+         - **หมายเหตุ:** ธนาคารมอบ “วงเงิน” ให้ “หน่วยงาน” เพื่อไปจ่าย Suppliers โดยตรง – **ไม่ได้โอนเงินเข้าเจ้าบริษัท**  
+         - แต่ระบบต้องบันทึกยอดคงเหลือ (`used_amount`) ใน `PostFinanceFacility`  
+       - `received_amount` (Decimal; ยอดที่ Supplier ได้รับจริงจากธนาคาร)  
+       - `bank_interest_fee` (Decimal; ดอกเบี้ย → ค่าเริ่มต้น = 0)  
+       - `repayment_amount` (Decimal; ยอดคืน → ค่าเริ่มต้น = 0)  
+       - `repayment_date` (Date; ค่าเริ่มต้น = null)  
+       - `status` (CharField; ค่าเริ่มต้น = `Active`)  
+   - **Validation:**  
+     - ตรวจสอบ `facility.used_amount + approved_amount ≤ facility.credit_limit`  
+       - ถ้าไม่พอวงเงิน → Throw `ValidationError("วงเงิน PostFinance ไม่เพียงพอ")`  
+   - **Create Logic:**  
+     1. สร้าง `PNLoanUsage` →  
+     2. อัปเดต `facility.used_amount += approved_amount` → `facility.save(update_fields=['used_amount'])`  
+
+4. **รับเงิน PN (Receive PNLoan)**  
+   > **คำอธิบาย:** “เมื่อวงเงิน PN ถูกเบิกออกจริง” หมายถึง เมื่อธนาคารโอนเงินจ่าย “Supplier” ตามวงเงิน PNLoan ที่ขอไว้ → ระบบจำเป็นต้องบันทึก “กระแสเงินเข้า (Inflow)” เพื่อให้รู้ว่าเงินส่วนนี้ถูกใช้แล้วและปรับยอดทางบัญชีภายใน (แม้เงินไม่ได้เข้า "บริษัท" แต่ต้องออกเป็นรายการ Cash Transaction เพื่อการติดตาม)  
+   1. หลังธนาคารโอนเงินจ่าย Supplier →  
+      - สร้าง `CashTransaction` 1 รายการ (บันทึก Inflow)  
+        ```python
+        CashTransaction.objects.create(
+          transaction_date = date.today(),
+          transaction_type = 'Receive_PNLoan',
+          related_id       = pnloan.id,   # id ของ PNLoanUsage
+          amount           = pnloan.used_amount,  # ยอดที่ Supplier ได้รับ (80% ของ income)
+          is_inflow        = True,
+          description      = f"Receive PNLoan for RevenueJob {revenue_job.id}",
+          bank_account     = None  # ถ้าไม่มีบัญชีธนาคารเข้าระบบ ก็เว้นว่าง
+        )
+        ```
+   2. **เหตุผลสร้าง “Inflow” บนระบบ:**  
+      - แม้เงินไม่ได้เข้าบริษัทโดยตรง แต่เพื่อ “ปิดยอด Supplier” (Supplier ได้รับเงินครบ)  
+      - ระบบต้องรู้ว่ามี Inflow จาก “วงเงิน PNLoan” เพื่อคำนวณ Cash Flow ภายใน  
+   3. หลังสร้าง `CashTransaction` →  
+      - หากกำหนด `bank_account` (เช่น บริษัทอาจรับเงินส่วนต่างที่ไม่ได้โอนให้ Supplier → เข้าบัญชีบริษัท)  
+        ```python
+        bank_acc.balance += amount  
+        bank_acc.save(update_fields=['balance'])
+        project_cash_acct = ProjectCashAccount.objects.get_or_create(date=today)[0]
+        # ปรับ ProjectCashAccount ตามที่อธิบายในหัวข้อ 8
+        ```  
+
+5. **เจ้าของงานชำระ Invoice (AccountsReceivable)**
+   - กลุ่ม `revenue_access` สร้าง `AccountsReceivable`  
+     - ฟิลด์หลัก:  
+       - `revenue_job` (FK → RevenueJob)  
+       - `invoice_number` (String; ต้องไม่ซ้ำ)  
+       - `invoice_date` / `due_date`  
+       - `total_amount` (ยอดราคางาน)  
+       - `paid_amount` (ยอดที่จ่ายมาแล้ว; ค่าเริ่มต้น = 0)  
+       - `status` (ค่าเริ่มต้น = `Unpaid`)  
+   - **Create Logic:**  
+     1. สร้าง AR →  
+     2. อัปเดต `revenue_job.status = 'Invoiced'` → `revenue_job.save(update_fields=['status'])`  
+   - **Update Logic (PATCH AR.paid_amount):**  
+     1. เมื่อ AR ได้รับเงินจริงเข้า (เจ้าของงานจ่ายเงิน) → ผู้ใช้งาน PATCH `paid_amount`  
+     2. หลังอัปเดต `paid_amount`:  
+        - ถ้า `paid_amount ≥ total_amount` → `status = 'Paid'`  
+        - ถ้า `0 < paid_amount < total_amount` → `status = 'Partial'`  
+        - `ar.save(update_fields=['paid_amount','status'])`  
+     3. หาก `ar.status == 'Paid'` → สร้าง `CashTransaction` (Inflow)  
+        ```python
+        CashTransaction.objects.create(
+          transaction_date = date.today(),
+          transaction_type = 'Revenue_Paid',
+          related_id       = ar.id,
+          amount           = ar.paid_amount,
+          is_inflow        = True,
+          description      = f"Revenue Paid for AR {ar.invoice_number}",
+          bank_account     = <bank_account_id ถ้ามี>
+        )
+        # อัปเดต bank_account.balance และ ProjectCashAccount ตามปกติ
+        ```
+
+6. **จ่ายคืน PN (PNLoan Repayment)**
+   - เมื่อผู้ใช้งานตัดสินใจคืนวงเงิน PN → สร้าง `CashTransaction` (Outflow)  
+     ```python
+     CashTransaction.objects.create(
+       transaction_date = date.today(),
+       transaction_type = 'PNLoan_Repayment',
+       related_id       = pnloan.id,
+       amount           = repayment_amount,  # ยอดที่คืนจริง
+       is_inflow        = False,
+       description      = f"Repay PNLoan for RevenueJob {revenue_job.id}",
+       bank_account     = <bank_account_id ถ้ามี>
+     )
+     # ปรับ bank_account.balance -= repayment_amount
+     ```
+   - **อัปเดต `PNLoanUsage`:**  
+     1. `pnloan.repayment_amount += repayment_amount`  
+     2. ถ้า `pnloan.repayment_amount ≥ pnloan.approved_amount` → `pnloan.status = 'Repaid'`  
+        ถ้า `0 < repayment_amount < approved_amount` → `pnloan.status = 'Partial_Repaid'`  
+     3. `pnloan.repayment_date = date.today()` (วันที่คืนล่าสุด)  
+     4. `pnloan.save(update_fields=['repayment_amount','repayment_date','status'])`
+
+7. **กรณี “วงเงินเครดิต Suppliers” (Supplier Credit)**
+   - หาก Supplier (เช่น Supplier A ขายน้ำมันดีเซล) ให้วงเงินเครดิต (เช่น 50 ล้านบาท) → ต้องเก็บในโมเดลใหม่ `SupplierCredit`  
+     ```python
+     class SupplierCredit(models.Model):
+         supplier_name           = models.CharField(max_length=100, unique=True)
+         credit_limit            = models.DecimalField(max_digits=16, decimal_places=2)  # เช่น 50,000,000.00
+         used_amount             = models.DecimalField(max_digits=16, decimal_places=2, default=Decimal('0.00'))
+         created_on              = models.DateField(auto_now_add=True)
+         updated_on              = models.DateField(auto_now=True)
+
+         def remaining_credit(self):
+             return self.credit_limit - self.used_amount
+
+         def __str__(self):
+             return f"{self.supplier_name} (Limit {self.credit_limit} / Used {self.used_amount})"
+     ```
+   - **เงื่อนไขการใช้งานเครดิต Suppliers:**  
+     1. หากต้องการเบิก “สินค้า / วัสดุ” (เช่น น้ำมันดีเซล) →  
+        - ตรวจสอบว่า `supplier_credit.remaining_credit() ≥ amount`  
+        - หากพอ → สร้าง `CashTransaction` (Outflow)  
+          ```python
+          CashTransaction.objects.create(
+            transaction_date = date.today(),
+            transaction_type = 'Supplier_Credit_Usage',
+            related_id       = supplier_credit.id,  # id ของ SupplierCredit
+            amount           = amount,
+            is_inflow        = False,
+            description      = f"Use credit from {supplier_credit.supplier_name}",
+            bank_account     = None
+          )
+          # ปรับ supplier_credit.used_amount += amount → supplier_credit.save(update_fields=['used_amount'])
+          # ปรับ ProjectCashAccount ตามปกติ
+          ```
+     2. เมื่อวงเงินเครดิต Suppliers ใช้เต็ม → ต้องจ่ายคืน (SupplierCredit Repayment)  
+        - สร้าง `CashTransaction` (Outflow) จากแหล่งเงินใดก็ได้ (PNLoan, ITDLoan, LC, Cash) เพื่อคืน Suppliers  
+        - ปรับ `supplier_credit.used_amount -= repayment_amount`  
+        - หากคืนครบทั้งหมด (`used_amount == 0`) → เครดิต Suppliers กลับมาเต็มวงได้ (status เป็น optional)
+
+---
+
+## 3. ITD CEM (วงเงินสนับสนุน 300 MB จากสำนักงานใหญ่)
+
+> **เพิ่มเงื่อนไข:**  
+> - ระบบต้องเชื่อมโยงกับ “PaymentRequest Workflow” เพื่อให้จ่ายเงินผ่าน ITD CEM ได้  
+> - เมื่อผู้ใช้งานเลือกจ่าย “จาก ITD CEM” ใน PaymentRequest → ต้องตรวจสอบวงเงิน ITD และบันทึกในรายการเดียวกัน  
+
+1. **สร้าง ITDLoan**
+   - กลุ่ม `itdloan_access` หรือ `cashflow_access` สร้าง `ITDLoan`  
+     - ฟิลด์หลัก:  
+       - `loan_name` (String; ค่าเริ่มต้น = `'ITD CEM Loan'`)  
+       - `total_amount` (Decimal; ค่าเริ่มต้น = Decimal('300000000.00'))  
+       - `received_amount` (Decimal; ยอดที่ได้รับจากสำนักงานใหญ่; ค่าเริ่มต้น = 0)  
+       - `used_amount` (Decimal; ยอดใช้งานจริง; ค่าเริ่มต้น = 0)  
+       - `created_by` (FK → User; อัตโนมัติ = ผู้ใช้ปัจจุบัน)  
+       - `created_on` (Date; ค่าเริ่มต้น = วันนี้)  
+   - **Logic เพิ่มเติม:**  
+     - หากสำนักงานใหญ่ “โอนเงินสนับสนุนมาเข้าบัญชีบริษัท” →  
+       1. สร้าง `CashTransaction` (Inflow)  
+          ```python
+          CashTransaction.objects.create(
+            transaction_date = date.today(),
+            transaction_type = 'Receive_ITDLoan',
+            related_id       = itdloan.id,
+            amount           = received_amount,
+            is_inflow        = True,
+            description      = "Receive ITD CEM Loan from HQ",
+            bank_account     = <bank_account_id ถ้ามี>
+          )
+          # ปรับ bank_account.balance และ ProjectCashAccount ตามปกติ
+          ```
+       2. ปรับ `itdloan.received_amount += received_amount` → `itdloan.save(update_fields=['received_amount'])`  
+
+2. **ใช้เงิน ITD (Use Funds)**
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/itdloan/{id}/use_funds/
+     ```
+     - Request Body:  
+       ```json
+       {
+         "amount": <จำนวนเงินที่ต้องการใช้>,
+         "description": "<ข้อความอธิบาย>",
+         "bank_account": <bank_account_id>    // อาจเป็น None ถ้าไม่ผ่านบัญชีธนาคาร
+       }
+       ```
+   - **เงื่อนไข:**  
+     1. `itdloan.used_amount + amount ≤ itdloan.total_amount`  
+        - ถ้าไม่พอ → คืน `400 Bad Request` พร้อมข้อความ “วงเงิน ITDLoan ไม่เพียงพอ”  
+     2. ถ้ามี `bank_account_id` → ดึง `bank_acc = BankAccount.objects.get(id=bank_account_id)`  
+   - **Logic เมื่อเงื่อนไขผ่าน:**  
+     1. สร้าง `CashTransaction` (Outflow)  
+        ```python
+        CashTransaction.objects.create(
+          transaction_date = date.today(),
+          transaction_type = 'ITDLoan_Usage',
+          related_id       = itdloan.id,
+          amount           = amount,
+          is_inflow        = False,
+          description      = description,
+          bank_account     = bank_acc
+        )
+        # ถ้ามี bank_acc → ปรับ bank_acc.balance -= amount  
+        # ปรับ ProjectCashAccount ตามปกติ
+        ```
+     2. ปรับ `itdloan.used_amount += amount` → `itdloan.save(update_fields=['used_amount'])`  
+   - **ความสัมพันธ์กับ PaymentRequest:**  
+     - เมื่อผู้ใช้งานสร้าง `PaymentRequestItem` แล้วเลือก `payment_type = 'ITDLoan'`  
+       → ไหลเข้าขั้นตอน “Use Funds” ของ ITDLoan แทนการสร้าง CashTransaction โดยตรง  
+     - รายการจ่ายทุกตัว (LC, PN, Cash, SupplierCredit, ITDLoan) ให้ไหลมาอยู่ใน “PaymentRequest” เพื่อรวมรอบก่อนโหวต  
+
+3. **ดูสถานะวงเงิน ITD**  
+   - API GET `/api/cashflow/itdloan/` (หรือ `/api/cashflow/itdloan/{id}/`)  
+   - Response ประกอบด้วย:  
+     - `loan_name`  
+     - `total_amount`  
+     - `received_amount`  
+     - `used_amount`  
+     - `balance = total_amount – used_amount`  
+     - `created_on` / `created_by`  
+
+---
+
+## 4. PaymentRequest Workflow (การขอจ่ายเงิน, รอบการรวมข้อมูลจากหลายแหล่ง)
+
+> **ปรับคำศัพท์:**  
+> - **SiteOperationExpense** จริง ๆ คือ “หมวดหมู่ค่าใช้จ่าย” (Category of Cash Flow) ไม่ใช่เฉพาะค่าใช้จ่ายภาคสนาม  
+> - แต่ละรายการจ่าย (LC, PN, Cash, ITDLoan, SupplierCredit) รวมอยู่ใน PaymentRequest เพื่อโหวต-อนุมัติต่อไป  
+
+1. **แหล่งข้อมูลที่เกี่ยวข้อง**  
+   - **AccountsPayable** (หนี้ค้างจ่ายจากปี 2566, 2567)  
+     - แยกหนี้ปี 2566 กับปี 2567 โดยใช้วันที่ 31/12/2566 เป็นเกณฑ์  
+     - สำหรับ “หนี้ปี 2567” ให้แบ่งย่อยช่วง Overdue (ยังไม่ Overdue, Overdue 1–30 วัน, Overdue 31–60 วัน, 61–90 วัน, >90 วัน)  
+   - **หมวดหมู่ค่าใช้จ่าย (ExpenseCategory)**  
+     - `SiteOperationExpense` คือโมเดลเก็บประวัติหมวดค่าใช้จ่าย (เช่น Salary & Wage, Fuel, Spare part ฯลฯ)  
+     - เมื่อสร้างรายการใหม่ → ให้เลือก `category` (CharField) จากรายการหมวดค่าใช้จ่าย  
+     - ฟิลด์สำคัญ:  
+       - `date` (วันที่บันทึก)  
+       - `expense_category` (หมวดหมู่)  
+       - `vendor` (FK → Vendor; ถ้ามี)  
+       - `pr_po_reference` (String; อ้างอิงเอกสาร PR/PO ถ้ามี)  
+       - `ap_reference` (FK → AccountsPayable; ถ้ามี AP แล้ว)  
+       - `amount` (ยอดก่อนหักภาษี)  
+       - `tax_withheld` (ยอดหัก ณ ที่จ่าย)  
+       - `net_amount` (ยอดสุทธิ = amount – tax_withheld)  
+       - `status` (`Pending_AP` / `AP_Invoiced` / `Paid`)  
+   - **เอกสารที่ใช้วงเงิน LC** (`LCRequest`)  
+   - **เอกสาร PO ที่ยังไม่สร้าง AP**  
+     - เก็บใน `SiteOperationExpense` ไปก่อน (ใส่ `ap_reference=null` + `status='Pending_AP'`)  
+   - **วงเงินเครดิต Suppliers** (SupplierCredit)  
+     - เมื่อใช้เครดิต Suppliers → สร้าง `CashTransaction(transaction_type='Supplier_Credit_Usage')` → ปรับ `SupplierCredit.used_amount`  
+
+2. **สร้าง PaymentRequest & Items**  
+   - กลุ่มผู้ใช้ `payables_access`, `finance_access` สร้าง `PaymentRequest`  
+     - ฟิลด์หลัก:  
+       - `title` (หัวข้อคำขอ)  
+       - `description` (TextField; อธิบายเหตุผลโดยสังเขป)  
+       - `created_by` (User ปัจจุบัน; `read_only_fields`)  
+       - `created_on` (Date; อัตโนมัติ)  
+       - `scheduled_date` (CharField; ระบุรอบ เช่น “5”, “15”, “25” หรือกำหนดรอบเอง)  
+       - `status` (CharField; ค่าเริ่มต้น = `Draft`)  
+       - `total_amount` (Decimal; **ห้ามแก้โดยตรง**, คำนวณอัตโนมัติจาก Items)  
+       - `items` (List of `PaymentRequestItem`)  
+   - โมเดล `PaymentRequestItem`  
+     - ฟิลด์หลัก:  
+       - `payment_request` (FK → PaymentRequest)  
+       - `description` (TextField; อธิบายรายละเอียดรายการ)  
+       - `related_ap` (FK → AccountsPayable; ถ้ารายการนี้ชำระ AP เดิม)  
+       - `related_expense_category` (FK → SiteOperationExpense; ถ้ามาจากหมวดค่าใช้จ่าย)  
+       - `related_lcrequest` (FK → LCRequest; ถ้าเป็นรายการ LC)  
+       - `related_suppliercredit` (FK → SupplierCredit; ถ้าใช้เครดิต Suppliers)  
+       - `amount` (Decimal; ยอดเงินที่ต้องจ่าย)  
+       - `payment_type` (CharField; เลือกจาก `['LC','PN','Cash','ITDLoan','SupplierCredit']`)  
+       - `vote_count` (PositiveInteger; ค่าเริ่มต้น = 0; `read_only=True`)  
+       - `chosen` (Boolean; ค่าเริ่มต้น = False; `read_only=True`)  
+   - **Create Logic (Serializer):**  
+     1. สร้าง `PaymentRequest(**validated_data_except_items)`  
+     2. วนลูปสร้างแต่ละ `PaymentRequestItem` ตาม `items_data`  
+     3. คำนวณ `total = sum(item.amount for item in items)` → `pr.total_amount = total` → `pr.save(update_fields=['total_amount'])`  
+
+3. **จัดรอบการรวม Item (Batching & Aggregation)**  
+   - ก่อนถึงวันรอบ (5, 15, 25 หรือรอบที่กำหนด) → ผู้สร้าง PaymentRequest สามารถ “ดึง” Item ค้างจ่ายจาก:  
+     1. **AccountsPayable** (ปี 2566 vs 2567)  
+        - ดึง AP ที่ `status != 'Paid'`  
+        - สำหรับหนี้ปี 2567 ให้แบ่ง Overdue ตามช่วงเวลา (ยังไม่ Overdue / Overdue 1–30 / 31–60 / 61–90 / >90)  
+     2. **ExpenseCategory (SiteOperationExpense)**  
+        - ดึงรายการ `SiteOperationExpense` ที่ `status == 'Pending_AP'` (ยังไม่ได้สร้าง AP)  
+     3. **LCRequest** (รอสร้าง LC จริง)  
+        - ดึง `LCRequest` ที่ `status` ในช่วง `Pending_ProfReview` หรือ `Prof_Approved`  
+     4. **SupplierCredit** (เครดิต Suppliers)  
+        - ดึง Suppliers ที่ `used_amount < credit_limit`  
+   - ผู้สร้าง PaymentRequest เลือก Item เหล่านี้มา “Add as Items” ใน `PaymentRequest`  
+     - **กรณี `payment_type == 'LC'`:**  
+       1. สร้าง `LCRequest` (status=`Pending_ProfReview`, ผูกกับ `PaymentRequestItem`)  
+     - **กรณี `payment_type == 'PN'`:**  
+       1. สร้าง `PNTicket` (status=`Pending`, ผูกกับ `PaymentRequestItem`)  
+     - **กรณี `payment_type == 'ITDLoan'`:**  
+       1. ตรวจสอบ `ITDLoan.remaining_balance() ≥ amount`  
+       2. หากเพียงพอ → สร้าง `PaymentRequestItem` (ผูก `related_expense_category` หรือ `related_lcrequest` ตามความเหมาะสม)  
+       3. สถานะการ “เบิกจาก ITDLoan” จะไปสร้าง CashTransaction เมื่อ Execute (ดูหัวข้อถัดไป)  
+     - **กรณี `payment_type == 'SupplierCredit'`:**  
+       1. ตรวจสอบ `supplier_credit.remaining_credit() ≥ amount`  
+       2. หากเพียงพอ → สร้าง `PaymentRequestItem` (ผูก `related_suppliercredit`)  
+       3. สถานะ “เบิกเครดิต Suppliers” จะสร้าง CashTransaction เมื่อ Execute  
+
+4. **CommitteeMember โหวต Item**
+   - โมเดล `CommitteeMember`  
+     - `user` (One-to-One → User; เป็นกรรมการแต่ละคน)  
+     - `department` (String; เช่น ‘Accounting’, ‘Finance’, ‘LC’)  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/paymentrequests/{pr_id}/vote/
+     ```
+     - Request Body:  
+       ```json
+       {
+         "member_id": <committee_member_id>,
+         "items": [<item_id>, <item_id>, …]
+       }
+       ```
+     - Logic:  
+       1. ดึง `pr = PaymentRequest.objects.get(id=pr_id)`  
+       2. ดึง `member = CommitteeMember.objects.get(id=member_id)`  
+       3. วนลูปแต่ละ `item_id` ใน `items`:  
+          - ดึง `item = PaymentRequestItem.objects.get(id=item_id, payment_request=pr)`  
+          - ถ้ายังไม่เคยโหวต (`Vote.objects.filter(member=member, item=item).exists() == False`) →  
+            - สร้าง `Vote(member=member, item=item)`  
+            - `item.vote_count += 1` → `item.save(update_fields=['vote_count'])`  
+            - เก็บ `item.id` ใน `votes_created`  
+       4. Response:  
+          ```json
+          { "voted_items": [<list_of_item_ids>] }
+          ```
+
+5. **ระบบแนะนำ Item (Recommend)**
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/paymentrequests/{pr_id}/recommend/
+     ```
+   - Logic:  
+     1. ดึง `pr = PaymentRequest.objects.get(id=pr_id)`  
+     2. ดึง `items = pr.items.all().order_by('-vote_count', '-amount')`  
+     3. `count = items.count()` → `top_n = max(1, count // 2)` (แนะนำครึ่งหนึ่งของรายการ)  
+     4. วนลูป `for idx, item in enumerate(items):`  
+        - ถ้า `idx < top_n` → `item.chosen = True` → `item.save(update_fields=['chosen'])`  
+        - เก็บ `item.id` ใน `recommended`  
+     5. Response:  
+        ```json
+        { "recommended": [<list_of_recommended_item_ids>] }
+        ```
+
+6. **CFO Review (อนุมัติ/ปฏิเสธ)**
+   - เฉพาะผู้ใช้ในกลุ่ม `cfo_access` เท่านั้นเข้าถึง Action ได้  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/paymentrequests/{pr_id}/cfo_review/
+     ```
+     - Request Body:  
+       ```json
+       { "approved": true }  // หรือ false
+       ```
+     - Logic:  
+       1. ดึง `pr = PaymentRequest.objects.get(id=pr_id)`  
+       2. ถ้า `approved == false` →  
+          - `pr.status = 'Rejected'`  
+          - `pr.save(update_fields=['status'])`  
+          - Response: `{"detail": "PaymentRequest ถูกปฏิเสธโดย CFO"}`  
+       3. ถ้า `approved == true` →  
+          - `pr.status = 'CFO_Review'`  
+          - `pr.save(update_fields=['status'])`  
+          - Response: `{"detail": "CFO อนุมัติ → รอ PD Approve"}`  
+
+7. **PD Approve (อนุมัติ/ปฏิเสธ)**
+   - เฉพาะผู้ใช้ในกลุ่ม `pd_access` เท่านั้นเข้าถึง Action ได้  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/paymentrequests/{pr_id}/pd_approve/
+     ```
+     - Request Body:  
+       ```json
+       { "approved": true }  // หรือ false
+       ```
+     - Logic:  
+       1. ดึง `pr = PaymentRequest.objects.get(id=pr_id)`  
+       2. ถ้า `approved == false` →  
+          - `pr.status = 'Rejected'`  
+          - `pr.save(update_fields=['status'])`  
+          - Response: `{"detail": "PaymentRequest ถูกปฏิเสธโดย PD"}`  
+       3. ถ้า `approved == true` →  
+          - `pr.status = 'PD_Approval'`  
+          - `pr.save(update_fields=['status'])`  
+          - Response: `{"detail": "PD อนุมัติ → พร้อม Execute"}`  
+
+8. **Execute PaymentRequest (สร้างเอกสารจ่ายเงินย่อย)**
+   - เฉพาะผู้ใช้ในกลุ่ม `payables_access` หรือ `finance_access` (หลัง PD อนุมัติ)  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/paymentrequests/{pr_id}/execute/
+     ```
+   - เงื่อนไขก่อนรัน: `pr.status == 'PD_Approval'`  
+   - Logic:  
+     1. ดึง `pr = PaymentRequest.objects.get(id=pr_id)`  
+     2. วนลูป `for item in pr.items.filter(chosen=True):`  
+        - **กรณี `item.payment_type == 'LC'`:**  
+          1. สร้าง `LCRequest(payment_item=item, bank_account=None, lc_amount=item.amount, status='Pending_ProfReview')`  
+          2. เก็บใน `executed_items.append({'item_id': item.id, 'lc_request_id': lc_req.id})`  
+        - **กรณี `item.payment_type == 'PN'`:**  
+          1. สร้าง `PNTicket(payment_item=item, status='Pending')`  
+          2. เก็บใน `executed_items.append({'item_id': item.id, 'pn_ticket_id': pn_ticket.id})`  
+        - **กรณี `item.payment_type == 'Cash'`:**  
+          1. สร้าง `CashPayment(payment_item=item, status='Pending')`  
+          2. เก็บใน `executed_items.append({'item_id': item.id, 'cash_payment_id': cash_pay.id})`  
+        - **กรณี `item.payment_type == 'ITDLoan'`:**  
+          1. สร้าง `CashTransaction` (Outflow) เบิกจาก ITDLoan:  
+             ```python
+             CashTransaction.objects.create(
+               transaction_date = date.today(),
+               transaction_type = 'ITDLoan_Usage',
+               related_id       = itdloan.id,
+               amount           = item.amount,
+               is_inflow        = False,
+               description      = f"Use ITDLoan for PaymentRequestItem {item.id}",
+               bank_account     = None
+             )
+             itdloan.used_amount += item.amount
+             itdloan.save(update_fields=['used_amount'])
+             ```  
+          2. เก็บใน `executed_items.append({'item_id': item.id, 'itdloan_usage': item.amount})`  
+        - **กรณี `item.payment_type == 'SupplierCredit'`:**  
+          1. สร้าง `CashTransaction` (Outflow) ใช้เครดิต Suppliers:  
+             ```python
+             CashTransaction.objects.create(
+               transaction_date = date.today(),
+               transaction_type = 'Supplier_Credit_Usage',
+               related_id       = supplier_credit.id,
+               amount           = item.amount,
+               is_inflow        = False,
+               description      = f"Use SupplierCredit for PaymentRequestItem {item.id}",
+               bank_account     = None
+             )
+             supplier_credit.used_amount += item.amount
+             supplier_credit.save(update_fields=['used_amount'])
+             ```  
+          2. เก็บใน `executed_items.append({'item_id': item.id, 'supplier_credit_used': item.amount})`  
+     3. เปลี่ยน `pr.status = 'Executed'` → `pr.save(update_fields=['status'])`  
+     4. Response:  
+        ```json
+        {"executed": [ 
+            {"item_id": X, "lc_request_id": Y}, 
+            {"item_id": Z, "pn_ticket_id": W},
+            {"item_id": A, "itdloan_usage": B},
+            {"item_id": C, "supplier_credit_used": D},
+            ...
+          ]}
+        ```
+
+---
+
+## 5. LCRequest → Swift → TR (วงเงิน Letter of Credit & Trust Receipt)
+
+> **ปัจจุบันมี 2 วงเงินหลัก: 800 MB และ 60 MB**  
+> ระบบต้องรองรับกรณีเปิดวงเงินใหม่ในอนาคต และการปิดวงเงินเดิมเมื่อใช้หมด  
+
+1. **LCRequest ถูกสร้างจาก “Execute PaymentRequest” เมื่อ `payment_type='LC'`**
+   - โมเดล `LCRequest`  
+     - `payment_item` (FK → PaymentRequestItem)  
+     - `request_date` (Date; อัตโนมัติ)  
+     - `bank_account` (FK → BankAccount; ถ้ายังไม่มีให้เป็น null)  
+     - `lc_amount` (Decimal; ยอดเงินใน LC)  
+     - `lc_number` (String; กรอกหลังอาจารย์อนุมัติ)  
+     - `expiry_date` (Date; กรอกหลังอาจารย์อนุมัติ; นับ 180 วัน)  
+     - `status` (CharField; ค่าเริ่มต้น = `Pending_ProfReview`)  
+
+2. **อาจารย์ตรวจเอกสาร LCRequest**
+   - กลุ่ม `professor_access` เท่านั้นเข้าถึงได้  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/lcrequests/{lc_id}/professor_approve/
+     ```
+     - เงื่อนไข: `lc.status == 'Pending_ProfReview'`  
+     - Logic:  
+       1. ดึง `lc = LCRequest.objects.get(id=lc_id)`  
+       2. เซต `lc.status = 'Prof_Approved'` → `lc.save(update_fields=['status'])`  
+       3. Response: `{"detail": "อาจารย์อนุมัติ LCRequest แล้ว"}`  
+
+3. **สร้าง LC จริง (Create LC)**
+   - หลังอาจารย์อนุมัติ (`lc.status == 'Prof_Approved'`)  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/lcrequests/{lc_id}/create_lc/
+     ```
+     - Request Body:  
+       ```json
+       {
+         "lc_number": "<หมายเลข LC>",
+         "expiry_date": "YYYY-MM-DD",
+         "bank_account": <bank_account_id>
+       }
+       ```
+     - Logic:  
+       1. ดึง `lc = LCRequest.objects.get(id=lc_id)`  
+       2. เซต:  
+          - `lc.lc_number = lc_number`  
+          - `lc.expiry_date = expiry_date`  
+          - `lc.bank_account = BankAccount.objects.get(id=bank_account_id)`  
+          - `lc.status = 'LC_Created'`  
+       3. `lc.save(update_fields=['lc_number','expiry_date','status','bank_account'])`  
+       4. Response: `{"detail": "สร้าง LC เรียบร้อย"}`  
+
+4. **บันทึก Swift Message (Bank Response)**
+   - หลังธนาคารส่ง Swift กลับมา → เก็บข้อความในระบบ  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/lcrequests/{lc_id}/record_swift/
+     ```
+     - Request Body:  
+       ```json
+       { "content": "<ข้อความ Swift ที่ธนาคารส่งมา>" }
+       ```
+     - Logic:  
+       1. ดึง `lc = LCRequest.objects.get(id=lc_id)`  
+       2. เงื่อนไข: `lc.status == 'LC_Created'`  
+       3. สร้าง `SwiftMessage(lc_request=lc, content=content)` → บันทึก  
+       4. เซต `lc.status = 'Swift_Sent'` → `lc.save(update_fields=['status'])`  
+       5. Response: `{"swift_id": <id ของ SwiftMessage ใหม่>}`  
+
+5. **รอครบ 180 วัน → แปลงเป็น TR (Trust Receipt)**
+   - Celery Task: `check_lcrequests_expiry`  
+     - รันทุกวัน (เช่น เวลา 01:00 น.)  
+     - ดึง `LCRequest` ทั้งหมดที่:  
+       - `status == 'Swift_Sent'`  
+       - `expiry_date ≤ today`  
+     - สำหรับแต่ละ `lc`:  
+       1. ถ้า `hasattr(lc, 'tr_request') == False` →  
+          สร้าง:
+          ```python
+          TRRequest.objects.create(
+            lc_request    = lc,
+            tr_number     = f"TR{lc.id}{today.strftime('%Y%m%d')}",
+            tr_amount     = lc.lc_amount,
+            interest_rate = Decimal('5.00'),
+            status        = 'Active'
+          )
+          ```
+       2. เซต `lc.status = 'TR_Converted'` → `lc.save(update_fields=['status'])`  
+
+6. **ชำระ TR (Repay TR)**
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/trrequests/{tr_id}/repay/
+     ```
+     - Request Body:  
+       ```json
+       {
+         "amount": <จำนวนเงินที่ต้องชำระ>,
+         "bank_account": <bank_account_id>
+       }
+       ```
+     - Logic:  
+       1. ดึง `tr = TRRequest.objects.get(id=tr_id)`  
+       2. เงื่อนไข: `tr.status == 'Active'`  
+       3. ดึง `bank_acc = BankAccount.objects.get(id=bank_account_id)` (ถ้ามี)  
+       4. สร้าง `CashTransaction` (Outflow)  
+          ```python
+          CashTransaction.objects.create(
+            transaction_date = date.today(),
+            transaction_type = 'TR_Payment',
+            related_id       = tr.id,
+            amount           = amount,
+            is_inflow        = False,
+            description      = f"Repay TR {tr.tr_number}",
+            bank_account     = bank_acc
+          )
+          ```
+       5. อัปเดต `tr.status = 'Repaid'` → `tr.save(update_fields=['status'])`  
+       6. Response: `{"tx_id": <id ของ CashTransaction ใหม่>}`  
+
+---
+
+## 6. PNTicket (ขั้นตอนก่อน Issue PN)
+
+> **เป็นขั้นตอนการจ่ายเงิน โดยใช้วงเงิน “Receive PNLoan”**  
+
+1. **PNTicket ถูกสร้างจาก “Execute PaymentRequest” เมื่อ `payment_type='PN'`**  
+   - โมเดล `PNTicket`  
+     - `payment_item` (FK → PaymentRequestItem)  
+     - `request_date` (Date; อัตโนมัติ)  
+     - `ticket_number` (String; กรอกหลังอนุมัติ)  
+     - `approved_on` (Date; วันที่อนุมัติ)  
+     - `status` (CharField; ค่าเริ่มต้น = `Pending`)  
+
+2. **อาจารย์ตรวจเอกสาร PNTicket**  
+   - กลุ่ม `professor_access` เท่านั้นเข้าถึงได้  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/pntickets/{ticket_id}/approve/
+     ```
+     - เงื่อนไข: `ticket.status == 'Pending'`  
+     - Logic:  
+       1. ดึง `ticket = PNTicket.objects.get(id=ticket_id)`  
+       2. เซต:  
+          - `ticket.ticket_number = <ข้อมูลจาก request>`  
+          - `ticket.approved_on = date.today()`  
+          - `ticket.status = 'Approved'`  
+       3. `ticket.save(update_fields=['ticket_number','approved_on','status'])`  
+       4. Response: `{"detail": "PNTicket อนุมัติแล้ว"}`  
+
+3. **Issue PN (สร้าง PNLoanUsage & ใช้วงเงิน PN)**
+   - หลังอาจารย์อนุมัติ → CFO/Finance Office ดำเนินการ Issue PN เพื่อจ่ายเงินค่าสินค้า / ค่าวัสดุ  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/pntickets/{ticket_id}/execute/
+     ```
+     - Request Body:  
+       ```json
+       { "bank_account": <bank_account_id> }
+       ```
+     - เงื่อนไข: `ticket.status == 'Approved'`  
+     - Logic:  
+       1. ดึง `ticket = PNTicket.objects.get(id=ticket_id)`  
+       2. ดึง `amount = ticket.payment_item.amount`  
+       3. ดึง `bank_acc = BankAccount.objects.get(id=bank_account_id)` (ถ้ามี)  
+       4. **เนื่องจากวงเงิน PN เคยบันทึกไว้ใน PNLoanUsage** → ใช้ยอด “Receive PNLoan” เป็น Inflow เรียบร้อยแล้ว  
+          - สร้าง `CashTransaction` (Outflow) เพื่อจ่ายเงินให้ Supplier / Vendor:  
+            ```python
+            CashTransaction.objects.create(
+              transaction_date = date.today(),
+              transaction_type = 'PNTicket_Issue',
+              related_id       = ticket.id,
+              amount           = amount,
+              is_inflow        = False,
+              description      = f"PNTicket Issue for Item {ticket.payment_item.id}",
+              bank_account     = bank_acc
+            )
+            # ปรับ bank_acc.balance -= amount
+            # ปรับ ProjectCashAccount ตามปกติ
+            ```
+       5. เซต `ticket.status = 'Executed'` → `ticket.save(update_fields=['status'])`  
+       6. Response: `{"tx_id": <id ของ CashTransaction ใหม่>}`  
+
+---
+
+## 7. CashPayment (ขั้นตอนออกเช็คเงินสด)
+
+> **เป็นการจ่ายเงินสด (Outflow) โดยใช้แหล่งเงินต่าง ๆ (Cash, PNLoan, ITDLoan, SupplierCredit)**  
+
+1. **CashPayment ถูกสร้างจาก “Execute PaymentRequest” เมื่อ `payment_type='Cash'`**  
+   - โมเดล `CashPayment`  
+     - `payment_item` (FK → PaymentRequestItem)  
+     - `request_date` (Date; อัตโนมัติ)  
+     - `check_number` (String; กรอกหลังอนุมัติ)  
+     - `issued_on` (Date; วันที่ออกเช็ค)  
+     - `status` (CharField; ค่าเริ่มต้น = `Pending`)  
+
+2. **อาจารย์ตรวจเอกสาร CashPayment**  
+   - กลุ่ม `professor_access` เท่านั้นเข้าถึงได้  
+   - API Endpoint:  
+     ```
+     POST /api/cashflow/cashpayments/{cash_id}/issue_cheque/
+     ```
+     - Request Body:  
+       ```json
+       {
+         "check_number": "<หมายเลขเช็ค>",
+         "bank_account": <bank_account_id>
+       }
+       ```
+     - Logic:  
+       1. ดึง `ch = CashPayment.objects.get(id=cash_id)`  
+       2. เงื่อนไข: `ch.status == 'Pending'`  
+       3. เซต:  
+          - `ch.check_number = check_number`  
+          - `ch.issued_on = date.today()`  
+          - `ch.status = 'Issued'`  
+       4. `ch.save(update_fields=['check_number','issued_on','status'])`  
+       5. ดึง `bank_acc = BankAccount.objects.get(id=bank_account_id)` (ถ้ามี)  
+       6. สร้าง `CashTransaction` (Outflow) เพื่อบันทึกการออกเช็ค:  
+          ```python
+          CashTransaction.objects.create(
+            transaction_date = date.today(),
+            transaction_type = 'Cash_Payment',
+            related_id       = ch.id,
+            amount           = ch.payment_item.amount,
+            is_inflow        = False,
+            description      = f"Cash payment for Item {ch.payment_item.id}",
+            bank_account     = bank_acc
+          )
+          # ปรับ bank_acc.balance -= amount
+          # ปรับ ProjectCashAccount ตามปกติ
+          ```
+       7. Response: `{"tx_id": <id ของ CashTransaction ใหม่>}`  
+
+---
+
+## 8. BankAccount Integration (จัดการยอดเงินในบัญชีธนาคารและยอดเงินโครงการ)
+
+1. **โมเดล `BankAccount`**
+   - ฟิลด์หลัก:  
+     - `name` (CharField; ชื่อบัญชี)  
+     - `bank_name` (CharField; ชื่อธนาคาร)  
+     - `account_number` (CharField; เลขบัญชี)  
+     - `balance` (DecimalField)  
+   - `__str__()` แสดง: `<bank_name> – <account_number> (Balance <balance>)`  
+
+2. **โมเดล `CashTransaction`**
+   - ฟิลด์หลัก:  
+     - `transaction_date` (Date; ค่าเริ่มต้น = วันนี้)  
+     - `transaction_type` (CharField; เลือกจาก TRANSACTION_CHOICES)  
+     - `related_id` (PositiveInteger; เก็บ id ของโมเดลที่เกี่ยวข้อง เช่น PNLoanUsage, TRRequest, PNTicket, LCRequest, SupplierCredit ฯลฯ)  
+     - `amount` (Decimal)  
+     - `is_inflow` (Boolean; True=เงินเข้า / False=เงินออก)  
+     - `description` (TextField; อธิบายเพิ่มเติม)  
+     - `bank_account` (ForeignKey → BankAccount; null=True, blank=True)  
+
+3. **เมื่อสร้าง `CashTransaction` (Serializer .create)**
+   - สร้าง `tx = super().create(validated_data)`  
+   - ถ้ามี `bank_account`:  
+     - ถ้า `is_inflow == True` → `bank_acc.balance += amount`  
+     - ถ้า `is_inflow == False` → `bank_acc.balance -= amount`  
+     - `bank_acc.save(update_fields=['balance'])`  
+   - **อัปเดต `ProjectCashAccount` อัตโนมัติ:**  
+     1. หา `tx_date = validated_data['transaction_date']`  
+     2. พยายามดึง `acct = ProjectCashAccount.objects.get(date=tx_date)`  
+        - ถ้าไม่มี:  
+          1. หา `prev_day = tx_date - 1 day`  
+          2. พยายามดึง `prev_acct = ProjectCashAccount.objects.get(date=prev_day)`  
+             - ถ้ามี → `opening = prev_acct.closing_balance`  
+             - หากไม่มี → `opening = Decimal('0.00')`  
+          3. สร้าง  
+             ```python
+             acct = ProjectCashAccount.objects.create(
+                 date = tx_date,
+                 opening_balance = opening,
+                 closing_balance = opening
+             )
+             ```  
+     3. ถ้า `is_inflow == True` → `acct.closing_balance += amount`  
+        ถ้า `is_inflow == False` → `acct.closing_balance -= amount`  
+     4. `acct.save(update_fields=['closing_balance'])`  
+
+4. **โมเดล `ProjectCashAccount`**
+   - ฟิลด์หลัก:  
+     - `date` (Date; unique=True)  
+     - `opening_balance` (Decimal; ยอดเปิดวัน)  
+     - `closing_balance` (Decimal; ยอดปิดวัน)  
+     - `remarks` (TextField; หากมีหมายเหตุเพิ่มเติม)  
+   - `__str__()` แสดง: `<date> → เปิด <opening_balance>, ปิด <closing_balance>`  
+
+---
+
+## 9. CashFlowForecast (คาดการณ์กระแสเงินสด)
+
+1. **โมเดล `CashFlowForecast`**
+   - ฟิลด์หลัก:  
+     - `forecast_month` (Date; เก็บเป็นวันที่ 1 ของเดือนนั้น ๆ)  
+     - `projected_cash_inflow` (Decimal; ยอดเงินเข้าในเดือนนั้น ๆ)  
+     - `projected_cash_outflow` (Decimal; ยอดเงินออกในเดือนนั้น ๆ)  
+     - `net_cash_flow` (Decimal; `inflow – outflow`)  
+     - `scenario` (CharField; เลือกจาก `['Base','Worst','Best']`)  
+     - `assumptions` (JSONField; เก็บค่า DSO, DPO, อัตราดอกเบี้ย ฯลฯ)  
+   - Meta:  
+     - `unique_together = ('forecast_month','scenario')`  
+   - `__str__()` แสดง: `Forecast <forecast_month> [<scenario>]`  
+
+2. **Celery Task: `run_cashflow_projection_task(start_month, num_months, assumptions, scenario)`**
+   - **Parameters:**  
+     1. `start_month`: String `'YYYY-MM-DD'` (แปลงเป็น date แล้วตั้งเป็นวันที่ 1 ของเดือน)  
+     2. `num_months`: จำนวนเดือนล่วงหน้า (เช่น 12)  
+     3. `assumptions`: Dict (เช่น `{ "DSO":60, "DPO":30, "PN_Rate":0.8, ... }`)  
+     4. `scenario`: `'Base'` | `'Worst'` | `'Best'`  
+   - **Logic (วนลูป `i` ใน `range(num_months)`):**  
+     1. แปลง `start_month` เป็น `start_date = date.fromisoformat(start_month)`  
+        - ถ้า ValueError (แปลงไม่สำเร็จ) → ใช้ `start_date = today.replace(day=1)`  
+     2. สำหรับทุก `i`:  
+        - `current_month = start_date + relativedelta(months=i)`  
+        - `forecast_month = current_month.replace(day=1)`  
+        - **STEP 1: หายอดเงินเข้า (Cash Inflow)**  
+          ```python
+          inflow_types = [
+            'Revenue_Paid',
+            'PNTicket_Issue',
+            'Receive_TradeFinance',
+            'Receive_BankLoan',
+            'Receive_ITDLoan',
+            'Supplier_Credit_Usage'
+          ]
+          inflow_qs = CashTransaction.objects.filter(
+            transaction_type__in = inflow_types,
+            transaction_date__year  = forecast_month.year,
+            transaction_date__month = forecast_month.month,
+            is_inflow             = True
+          )
+          projected_inflow = sum(tx.amount for tx in inflow_qs)
+          ```
+        - **STEP 2: หายอดเงินออก (Cash Outflow)**  
+          ```python
+          outflow_types = [
+            'PNLoan_Repayment',
+            'TradeFinance_Repayment',
+            'BankLoan_Repayment',
+            'LC_Payment',
+            'TR_Payment',
+            'Cash_Payment',
+            'Interest_Fee',
+            'ITDLoan_Usage',
+            'Supplier_Credit_Usage'
+          ]
+          outflow_qs = CashTransaction.objects.filter(
+            transaction_type__in = outflow_types,
+            transaction_date__year  = forecast_month.year,
+            transaction_date__month = forecast_month.month,
+            is_inflow             = False
+          )
+          projected_outflow = sum(tx.amount for tx in outflow_qs)
+          ```
+        - **STEP 3: คำนวณ Net Cash Flow**  
+          ```python
+          net_cash_flow = projected_inflow - projected_outflow
+          ```
+        - **STEP 4: Upsert ข้อมูลลง `CashFlowForecast`**  
+          ```python
+          CashFlowForecast.objects.update_or_create(
+            forecast_month = forecast_month,
+            scenario       = scenario,
+            defaults = {
+              'projected_cash_inflow'  : projected_inflow,
+              'projected_cash_outflow' : projected_outflow,
+              'net_cash_flow'          : net_cash_flow,
+              'assumptions'            : assumptions
+            }
+          )
+          ```
+
+3. **Celery Task: `daily_cashflow_projection()`**
+   - รันทุกต้นเดือน (เช่น เวลา 00:05) ผ่าน Beat Schedule  
+   - Logic:  
+     1. กำหนด `assumptions` เริ่มต้น (DSO=60, DPO=30, PN_Rate=0.8, TF_Rate=1.0, InterestRates={ … })  
+     2. `today = date.today()` → `first_of_month = today.replace(day=1)`  
+     3. เรียก `run_cashflow_projection_task.delay(first_of_month.strftime('%Y-%m-%d'), 12, assumptions, 'Base')`  
+
+4. **Beat Schedule (ใน `settings.py` / `django_celery_beat`):**  
+   ```python
+   CELERY_BEAT_SCHEDULE = {
+     # รันทุกต้นเดือน เวลา 00:05
+     'daily_cashflow_projection': {
+       'task'    : 'cashflow.tasks.daily_cashflow_projection',
+       'schedule': crontab(hour=0, minute=5),
+     },
+     # รันทุกต้นเดือน เวลา 00:10 (คำนวณดอกเบี้ยสินเชื่อธนาคาร)
+     'monthly_bankloan_interest': {
+       'task'    : 'loans.tasks.calculate_bankloan_interest',
+       'schedule': crontab(hour=0, minute=10, day_of_month=1),
+     },
+     # รันทุกต้นเดือน เวลา 00:00 (Projection อีกแบบ; ตัวอย่าง args)
+     'monthly_cashflow_projection': {
+       'task'    : 'cashflow.tasks.run_cashflow_projection_task',
+       'schedule': crontab(hour=0, minute=0, day_of_month=1),
+       'args'    : (
+         '2025-01-01', 12,
+         {
+           "DSO": 60,
+           "DPO": 30,
+           "PN_Rate": 0.8,
+           "TF_Rate": 1.0,
+           "InterestRates": {
+             "Pre-Finance"     : 6.5,
+             "Working Capital" : 7.0,
+             "Hire Purchase"   : 5.0
+           }
+         },
+         'Base'
+       ),
+     },
+     # ตรวจทุกวัน เวลา 01:00: เปลี่ยน LC → TR เมื่อหมดอายุ
+     'check_lcrequests_expiry': {
+       'task'    : 'cashflow.tasks.check_lcrequests_expiry',
+       'schedule': crontab(hour=1, minute=0),
+     },
+   }
+
