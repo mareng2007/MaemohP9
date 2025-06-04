@@ -29,7 +29,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG')
+DEBUG = os.getenv('DEBUG', '0') == '1'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
@@ -131,11 +131,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cashcrmDB',
-        'USER': 'mareng2007',
-        'PASSWORD': 'Skr4018kku',
-        'HOST': 'localhost',  # หรือเป็น IP หรือชื่อโฮสต์ของฐานข้อมูล
-        'PORT': '5432',  # Default PostgreSQL port
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),  # หรือเป็น IP หรือชื่อโฮสต์ของฐานข้อมูล
+        'PORT': os.getenv('DB_PORT'),  # Default PostgreSQL port
     }
 }
 
