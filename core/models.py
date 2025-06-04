@@ -51,3 +51,19 @@ class OTP(models.Model):
     def __str__(self):
         return f"{self.email} → {self.code} (Used: {self.is_used})"
 
+
+class ExchangeRate(models.Model):
+    currency = models.CharField(max_length=10)
+    rate = models.CharField(max_length=20)
+    scraped_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.currency} {self.rate}"
+
+class InterestRate(models.Model):
+    name = models.CharField(max_length=50)
+    rate = models.CharField(max_length=20)
+    scraped_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} {self.rate}"

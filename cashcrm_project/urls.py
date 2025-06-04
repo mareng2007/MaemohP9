@@ -40,6 +40,8 @@ urlpatterns = [
     path('api/fleet/', include('fleet.urls', namespace='fleet-api')),
     path('api/mineprogress/', include('mineprogress.urls', namespace='mineprogress-api')),
     path('api/notifications/', include('notifications.urls', namespace='notifications-api')),
+    path('api/payments/', include('payments.urls', namespace='payments-api')),
+    path('documents/', include('documents.urls', namespace='documents')),
     
     # Frontend URLs ของแต่ละแอป (Web)
     path('revenue/', include('revenue.urls', namespace='revenue')),

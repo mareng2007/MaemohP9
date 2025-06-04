@@ -970,4 +970,11 @@ required:
 - `DB_PASSWORD` – database password.
 - `DB_HOST` – database host address.
 - `DB_PORT` – database port number.
+- `STRIPE_API_KEY` – API key for Stripe payments.
+- `PAYPAL_CLIENT_ID` – PayPal client ID.
+- `PAYPAL_CLIENT_SECRET` – PayPal client secret.
+
+The project now includes scheduled scraping tasks using BeautifulSoup to gather
+exchange rates and interest rates. Results are stored in the new
+`ExchangeRate` and `InterestRate` models.
 
