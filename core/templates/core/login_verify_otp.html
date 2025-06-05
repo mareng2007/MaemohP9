@@ -1,0 +1,28 @@
+{# D:\Django\MaemohP9\core\templates\core\login_verify_otp.html #}
+{% extends "core/base.html" %}
+{% block title %}ยืนยัน OTP (ทางอีเมล) – MaemohMine Project{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3 pt-3">
+  <div class="col-md-5 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h3 class="card-title mb-4 text-center">ยืนยันรหัส OTP</h3>
+        <p class="text-center">รหัส OTP ถูกส่งไปที่อีเมล: <strong>{{ email }}</strong></p>
+        <form method="post">
+          {% csrf_token %}
+          {{ form.email }}  {# hidden field เก็บอีเมล #}
+          <div class="mb-3">
+            {{ form.code.label_tag }}
+            {{ form.code }}
+            {% if form.code.errors %}<div class="text-danger">{{ form.code.errors }}</div>{% endif %}
+          </div>
+          <button type="submit" class="btn btn-success w-100">ยืนยัน OTP</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

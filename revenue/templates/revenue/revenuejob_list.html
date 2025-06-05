@@ -1,0 +1,101 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Revenue Jobs{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="section-title">รายการ Revenue Jobs</h2>
+    <a href="{% url 'revenue:revenuejob-create' %}" class="btn btn-primary">
+      <i class="fas fa-plus-circle me-1"></i> สร้างใหม่
+    </a>
+  </div>
+
+  <form method="get" class="row g-2 mb-3">
+    <div class="col-md-5">
+      {{ filter.form.q.label_tag }}
+      {{ filter.form.q }}
+    </div>
+    <div class="col-md-3">
+      {{ filter.form.status.label_tag }}
+      {{ filter.form.status }}
+    </div>
+    <div class="col-md-2 align-self-end">
+      <button type="submit" class="btn btn-outline-primary w-100">Filter</button>
+    </div>
+  </form>
+
+  <table class="table table-hover">
+    <thead class="table-light">
+      <tr>
+        <th>วันที่</th>
+        <th>Job Code</th>
+        <th>รายละเอียด (รายการ)</th>
+        <th>Volume</th>
+        <th>จำนวนเงิน</th>
+        <th>สถานะ</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+        <tr>
+          <td>{{ job.date }}</td>
+          <td>{{ job.get_job_code_display }}</td>
+          <td>{{ job.description }}</td>
+          <td>{{ job.volume|floatformat:2 }}</td>
+          <td>{{ job.income_amount|floatformat:2 }}</td>
+          <td>
+            {% if job.status == 'Pending' %}
+              <span class="badge bg-secondary">Pending</span>
+            {% elif job.status == 'Requested_PN' %}
+              <span class="badge bg-info">Requested PN</span>
+            {% elif job.status == 'Invoiced' %}
+              <span class="badge bg-warning text-dark">Invoiced</span>
+            {% elif job.status == 'Paid' %}
+              <span class="badge bg-success">Paid</span>
+            {% endif %}
+          </td>
+          <td>
+            <a href="{% url 'revenue:revenuejob-detail' job.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="fas fa-eye"></i>
+            </a>
+            <a href="{% url 'revenue:revenuejob-update' job.pk %}" class="btn btn-sm btn-outline-warning">
+              <i class="fas fa-edit"></i>
+            </a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="7" class="text-center text-muted">ยังไม่มีข้อมูล Revenue Jobs</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if is_paginated %}
+    <nav aria-label="Page navigation">
+      <ul class="pagination">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&amp;{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">Previous</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+        {% for num in paginator.page_range %}
+          {% if num == page_obj.number %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% else %}
+            <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&amp;{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&amp;{% endif %}page={{ num }}">{{ num }}</a></li>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?{% if request.GET.q %}q={{ request.GET.q }}&amp;{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next</a></li>
+        {% else %}
+          <li class="page-item disabled"><span class="page-link">Next</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+  {% endif %}
+</div>
+{% endblock %}
+

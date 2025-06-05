@@ -1,0 +1,185 @@
+{# core/templates/core/dashboard.html #}
+{% extends "core/base.html" %}
+{% block title %}Dashboard – MaemohMine Project{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="section-title">Main Dashboard</h2>
+  <p class="text-muted mb-4">
+    สรุปสถานะทางการเงินทั้งหมด (เฉพาะ CFO และ PD สามารถเข้าถึงได้)
+  </p>
+
+  <div class="row gy-4">
+    {# 1) Bank Accounts #}
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Bank Accounts</h5>
+          {% if bank_accounts %}
+            <ul class="list-group">
+              {% for ba in bank_accounts %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                  {{ ba.bank_name }} – {{ ba.account_number }}
+                  <span class="badge bg-primary rounded-pill">{{ ba.balance|floatformat:2 }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted">ยังไม่มีบัญชีธนาคาร</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 2) Latest ProjectCashAccount #}
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Project Cash Account (Latest)</h5>
+          {% if latest_cash_account %}
+            <p>วันที่: {{ latest_cash_account.date }}</p>
+            <p>ยอดเปิด: {{ latest_cash_account.opening_balance|floatformat:2 }}</p>
+            <p>ยอดปิด: {{ latest_cash_account.closing_balance|floatformat:2 }}</p>
+          {% else %}
+            <p class="text-muted">ยังไม่มีข้อมูล Cash Account</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 3) Cash Flow Forecast (Base Case) #}
+    <div class="col-md-12">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Cash Flow Forecast (Base Case)</h5>
+          {% if forecast %}
+            <p>เดือน: {{ forecast.forecast_month }}</p>
+            <p>Inflow: {{ forecast.projected_cash_inflow|floatformat:2 }}</p>
+            <p>Outflow: {{ forecast.projected_cash_outflow|floatformat:2 }}</p>
+            <p>Net Cash Flow: {{ forecast.net_cash_flow|floatformat:2 }}</p>
+          {% else %}
+            <p class="text-muted">ยังไม่มีข้อมูล Forecast</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {# 4) Outstanding AP & AR #}
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Outstanding AP</h5>
+          <p>รายการ AP ค้างชำระ: <strong>{{ outstanding_aps }}</strong></p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Outstanding AR</h5>
+          <p>รายการ AR ค้างชำระ: <strong>{{ outstanding_ars }}</strong></p>
+        </div>
+      </div>
+    </div>
+
+    {# 5) Active PNLoanUsage #}
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Active PNLoan Usage</h5>
+          <p>จำนวน Active PNLoanUsage: <strong>{{ pn_active_count }}</strong></p>
+        </div>
+      </div>
+    </div>
+
+    {# 6) LCRequest Status #}
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">LCRequest Status</h5>
+          <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Pending Professor Review
+              <span class="badge bg-warning rounded-pill">{{ lc_pending_prof }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Professor Approved
+              <span class="badge bg-info rounded-pill">{{ lc_prof_approved }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              LC Created
+              <span class="badge bg-primary rounded-pill">{{ lc_created }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Swift Sent
+              <span class="badge bg-secondary rounded-pill">{{ lc_swift_sent }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    {# 7) PNTicket Status #}
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">PN Ticket Status</h5>
+          <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Pending Approval
+              <span class="badge bg-warning rounded-pill">{{ pn_pending }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Approved
+              <span class="badge bg-success rounded-pill">{{ pn_approved }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    {# 8) CashPayment Status #}
+    <div class="col-md-6">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">Cash Payment Status</h5>
+          <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Pending
+              <span class="badge bg-warning rounded-pill">{{ cash_pending }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Issued
+              <span class="badge bg-primary rounded-pill">{{ cash_issued }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    {# 9) ITDLoan Status #}
+    <div class="col-md-6 mb-4">
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">ITD Loan Status</h5>
+          <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Pending Approval
+              <span class="badge bg-warning rounded-pill">{{ itd_pending }}</span>
+            </li>
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              Active
+              <span class="badge bg-success rounded-pill">{{ itd_active }}</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="my-4">
+  <p class="text-center mb-0">
+    © 2025 MaemohMine Co., Ltd. สงวนลิขสิทธิ์
+  </p>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}
+  รายละเอียด AR #{{ ar.invoice_number }}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="section-title">รายละเอียด Accounts Receivable #{{ ar.invoice_number }}</h2>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <dl class="row">
+        <dt class="col-sm-3">Revenue Job</dt>
+        <dd class="col-sm-9">{{ ar.revenue_job.job_code }} ({{ ar.revenue_job.description }})</dd>
+
+        <dt class="col-sm-3">Invoice Number</dt>
+        <dd class="col-sm-9">{{ ar.invoice_number }}</dd>
+
+        <dt class="col-sm-3">Invoice Date</dt>
+        <dd class="col-sm-9">{{ ar.invoice_date }}</dd>
+
+        <dt class="col-sm-3">Due Date</dt>
+        <dd class="col-sm-9">{{ ar.due_date }}</dd>
+
+        <dt class="col-sm-3">Total Amount</dt>
+        <dd class="col-sm-9">{{ ar.total_amount|floatformat:2 }}</dd>
+
+        <dt class="col-sm-3">Paid Amount</dt>
+        <dd class="col-sm-9">{{ ar.paid_amount|floatformat:2 }}</dd>
+
+        <dt class="col-sm-3">Status</dt>
+        <dd class="col-sm-9">
+          {% if ar.status == 'Unpaid' %}
+            <span class="badge bg-secondary">Unpaid</span>
+          {% elif ar.status == 'Partial' %}
+            <span class="badge bg-warning text-dark">Partial</span>
+          {% elif ar.status == 'Paid' %}
+            <span class="badge bg-success">Paid</span>
+          {% endif %}
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <a href="{% url 'revenue:ar-update' ar.pk %}" class="btn btn-warning">
+    <i class="fas fa-edit me-1"></i> แก้ไข
+  </a>
+  <a href="{% url 'revenue:ar-list' %}" class="btn btn-secondary">กลับไป</a>
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{# D:\Django\MaemohP9\core\templates\core\registration_sent.html #}
+{% extends "core/base.html" %}
+{% block title %}ยืนยันอีเมลแล้ว{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3 pt-3">
+  <div class="col-md-6">
+    <div class="alert alert-info text-center shadow-sm">
+      <h4 class="alert-heading">ส่งอีเมลยืนยันเรียบร้อยแล้ว</h4>
+      <p>เราได้ส่งลิงก์ยืนยันการสมัครไปยัง <strong>{{ email }}</strong></p>
+      <hr>
+      <p>กรุณาตรวจสอบอีเมลและคลิกลิงก์ภายใน 24 ชั่วโมงเพื่อเปิดใช้งานบัญชี</p>
+      <a href="{% url 'core:resend_activation' %}" class="btn btn-outline-primary mt-3">ส่งลิงก์ยืนยันใหม่</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

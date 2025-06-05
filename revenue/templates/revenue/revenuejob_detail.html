@@ -1,0 +1,51 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}
+  รายละเอียด Revenue Job #{{ job.pk }}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="section-title">รายละเอียด Revenue Job #{{ job.pk }}</h2>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <dl class="row">
+        <dt class="col-sm-3">วันที่</dt>
+        <dd class="col-sm-9">{{ job.date }}</dd>
+
+        <dt class="col-sm-3">Job Code</dt>
+        <dd class="col-sm-9">{{ job.get_job_code_display }}</dd>
+
+        <dt class="col-sm-3">รายการ (คำอธิบาย)</dt>
+        <dd class="col-sm-9">{{ job.description }}</dd>
+
+        <dt class="col-sm-3">Volume</dt>
+        <dd class="col-sm-9">{{ job.volume|floatformat:2 }}</dd>
+
+        <dt class="col-sm-3">จำนวนเงิน</dt>
+        <dd class="col-sm-9">{{ job.income_amount|floatformat:2 }}</dd>
+
+        <dt class="col-sm-3">สถานะ</dt>
+        <dd class="col-sm-9">
+          {% if job.status == 'Pending' %}
+            <span class="badge bg-secondary">Pending</span>
+          {% elif job.status == 'Requested_PN' %}
+            <span class="badge bg-info">Requested PN</span>
+          {% elif job.status == 'Invoiced' %}
+            <span class="badge bg-warning text-dark">Invoiced</span>
+          {% elif job.status == 'Paid' %}
+            <span class="badge bg-success">Paid</span>
+          {% endif %}
+        </dd>
+      </dl>
+    </div>
+  </div>
+
+  <a href="{% url 'revenue:revenuejob-update' job.pk %}" class="btn btn-warning">
+    <i class="fas fa-edit me-1"></i> แก้ไข
+  </a>
+  <a href="{% url 'revenue:revenuejob-list' %}" class="btn btn-secondary">กลับไป</a>
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}
+  {% if object %}
+    แก้ไข Revenue Job #{{ object.pk }}
+  {% else %}
+    สร้าง Revenue Job ใหม่
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="section-title">
+    {% if object %}
+      แก้ไข Revenue Job #{{ object.pk }}
+    {% else %}
+      สร้าง Revenue Job ใหม่
+    {% endif %}
+  </h2>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        <div class="row mb-3">
+          <div class="col-md-4">
+            {{ form.date.label_tag }} 
+            {{ form.date }}
+            {{ form.date.errors }}
+          </div>
+          <div class="col-md-4">
+            {{ form.job_code.label_tag }}
+            {{ form.job_code }}
+            {{ form.job_code.errors }}
+          </div>
+          <div class="col-md-4">
+            {{ form.status.label_tag }}
+            {{ form.status }}
+            {{ form.status.errors }}
+          </div>
+        </div>
+
+        <div class="mb-3">
+          {{ form.description.label_tag }}
+          {{ form.description }}
+          {{ form.description.errors }}
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            {{ form.volume.label_tag }}
+            {{ form.volume }}
+            {{ form.volume.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.income_amount.label_tag }}
+            {{ form.income_amount }}
+            {{ form.income_amount.errors }}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-success">
+          {% if object %}บันทึก{% else %}สร้างใหม่{% endif %}
+        </button>
+        <a href="{% url 'revenue:revenuejob-list' %}" class="btn btn-secondary">ยกเลิก</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

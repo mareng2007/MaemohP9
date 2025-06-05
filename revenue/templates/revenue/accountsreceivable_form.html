@@ -1,0 +1,81 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}
+  {% if object %}
+    แก้ไข AR #{{ object.invoice_number }}
+  {% else %}
+    สร้าง Accounts Receivable ใหม่
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h2 class="section-title">
+    {% if object %}
+      แก้ไข AR #{{ object.invoice_number }}
+    {% else %}
+      สร้าง Accounts Receivable ใหม่
+    {% endif %}
+  </h2>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="mb-3">
+          {{ form.revenue_job.label_tag }}
+          {{ form.revenue_job }}
+          {{ form.revenue_job.errors }}
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            {{ form.invoice_number.label_tag }}
+            {{ form.invoice_number }}
+            {{ form.invoice_number.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.status.label_tag }}
+            {{ form.status }}
+            {{ form.status.errors }}
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            {{ form.invoice_date.label_tag }}
+            {{ form.invoice_date }}
+            {{ form.invoice_date.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.due_date.label_tag }}
+            {{ form.due_date }}
+            {{ form.due_date.errors }}
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-md-6">
+            {{ form.total_amount.label_tag }}
+            {{ form.total_amount }}
+            {{ form.total_amount.errors }}
+          </div>
+          <div class="col-md-6">
+            {{ form.paid_amount.label_tag }}
+            {{ form.paid_amount }}
+            {{ form.paid_amount.errors }}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-success">
+          {% if object %}บันทึก{% else %}สร้างใหม่{% endif %}
+        </button>
+        <a href="{% url 'revenue:ar-list' %}" class="btn btn-secondary">ยกเลิก</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

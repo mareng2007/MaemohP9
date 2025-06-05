@@ -1,0 +1,26 @@
+{# D:\Django\MaemohP9\core\templates\core\resend_activation.html #}
+{% extends "core/base.html" %}
+{% block title %}ส่งลิงก์ยืนยันใหม่{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3 pt-3">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <h3 class="card-title mb-4 text-center">ส่งลิงก์ยืนยันอีเมลใหม่</h3>
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            {{ form.email.label_tag }}
+            {{ form.email }}
+            {% if form.email.errors %}<div class="text-danger">{{ form.email.errors }}</div>{% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary w-100">ส่งลิงก์ยืนยันใหม่</button>
+        </form>
+        <p class="mt-3 text-center">กลับไปหน้า <a href="{% url 'core:login' %}">ล็อกอิน</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
