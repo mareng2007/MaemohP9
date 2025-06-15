@@ -26,6 +26,7 @@ urlpatterns = [
 
     path('logout/', views.logout_view, name='logout'),                            # ออกจากระบบ
     path('profile/', views.profile_view, name='profile'),                         # โปรไฟล์ (ต้อง login)
+    path('contact/', views.contact_submit, name='contact'),  # ส่งข้อความติดต่อ
 
     # รวม API endpoints ของ Core (เช่น /api/core/users/)
     path('api/', include((router.urls, 'core-api'))),

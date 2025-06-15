@@ -233,12 +233,12 @@
         <ul class="navbar-nav me-auto mb-2 mb-lg-0">
           <li class="nav-item"><a class="nav-link" href="{% url 'core:home' %}">หน้าหลัก</a></li>
           
-          {# เงื่อนไข: แสดง Dashboard เฉพาะ CFO หรือ PD เท่านั้น #}
+          {% comment %} {# เงื่อนไข: แสดง Dashboard เฉพาะ CFO หรือ PD เท่านั้น #}
           {% if user.is_authenticated %}
             {% if user|has_group:"cfo_access" or user|has_group:"pd_access" %}
               <li class="nav-item"><a class="nav-link" href="{% url 'core:dashboard' %}">Dashboard</a></li>
             {% endif %}
-          {% endif %}
+          {% endif %} {% endcomment %}
           
           <li class="nav-item"><a class="nav-link" href="#about">เกี่ยวกับเรา</a></li>
           <li class="nav-item"><a class="nav-link" href="#services">บริการของเรา</a></li>
@@ -281,11 +281,15 @@
 
             {# ถ้า user in group 'revenue_access' #}
             {% if user|has_group:"revenue_access" %}
-              <li class="nav-item">
-                <a class="nav-link {% if request.resolver_match.namespace == 'revenue' %}active{% endif %}"
-                   href="{% url 'revenue:revenuejob-list' %}">
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle {% if request.resolver_match.namespace == 'revenue' %}active{% endif %}"
+                   href="#" id="navbarRevenueDropdown" role="button" data-bs-toggle="dropdown">
                   <i class="fas fa-chart-line me-1"></i>Revenue
                 </a>
+                <ul class="dropdown-menu" aria-labelledby="navbarRevenueDropdown">
+                  <li><a class="dropdown-item" href="{% url 'revenue:revenuejob-list' %}">Revenue Jobs</a></li>
+                  <li><a class="dropdown-item" href="{% url 'revenue:ar-list' %}">Accounts Receivable</a></li>
+                </ul>
               </li>
             {% endif %}
 

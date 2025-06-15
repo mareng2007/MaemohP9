@@ -42,3 +42,16 @@ dist/
 # OS‐generated files
 .DS_Store
 Thumbs.db
+
+# ข้อมูลจริง
+data/raw/*
+*.xlsm
+
+
+# ถ้ามีไฟล์ override สำหรับเครื่องเราเอง
+# docker-compose.override.yml
+
+
+# ถ้า mount host volume ในโฟลเดอร์ project (เช่น /vol/)
+vol/
+volumes/

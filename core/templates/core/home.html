@@ -1,5 +1,7 @@
 {# D:\Django\MaemohP9\core\templates\core\home.html #}
+
 {% extends "core/base.html" %}
+{% load static %}
 {% block title %}หน้าหลัก – MaemohMine Project{% endblock %}
 {% load group_tags %}
 
@@ -11,11 +13,11 @@
     <!-- Slide 1: เหมืองเปิด + เครื่องจักรใหญ่ -->
     <div 
       class="carousel-item active" 
-      style="background-image: url('https://images.unsplash.com/photo-1555382802-e7acb40a1aee?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');"
+      style="background-image: url('{% static 'img/home/mine_pit.jpg' %}');"
     >
       <div class="carousel-caption">
-        <h1>เหมืองแม่เมาะ: เปิดพื้นที่เพื่ออนาคต</h1>
-        <p>ติดตามวิธีการขุดลิกไนต์ด้วยเทคโนโลยีล่าสุด และการจัดการทรัพยากรอย่างยั่งยืน</p>
+        <h1>เหมืองแม่เมาะสัญญา 9 : เปิดพื้นที่เพื่ออนาคต</h1>
+        <p>ติดตามวิธีการขุดขนดินและถ่านหินลิกไนต์ด้วยเทคโนโลยีล่าสุด และการจัดการทรัพยากรอย่างยั่งยืน</p>
         <a href="#about" class="btn btn-cta">เรียนรู้เพิ่มเติม</a>
       </div>
     </div>
@@ -23,23 +25,23 @@
     <!-- Slide 2: เครื่องจักรขนาดใหญ่ -->
     <div 
       class="carousel-item" 
-      style="background-image: url('https://images.unsplash.com/photo-1600201893836-5f7bd693cfa0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');"
+      style="background-image: url('{% static 'img/home/bwe.jpg' %}');"
     >
       <div class="carousel-caption">
         <h1>ยานยนต์และเครื่องจักรหนัก</h1>
-        <p>ระบบรถแบ็กโฮและรถตักที่ออกแบบมาเพื่อการขุดลิกไนต์โดยเฉพาะ</p>
+        <p>รถขุด Bucket Wheel Excavator ที่ออกแบบมาเพื่อการขุดดินแบบต่อเนื่องโดยเฉพาะ</p>
         <a href="#services" class="btn btn-cta">ดูบริการของเรา</a>
       </div>
     </div>
 
     <!-- Slide 3: สายพานลำเลียง -->
     <div 
-      class="carousel-item" 
-      style="background-image: url('https://images.unsplash.com/photo-1544033524-36a89a38c37f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80');"
+      class="carousel-item"
+      style="background-image: url('{% static 'img/home/conveyor.jpg' %}');"
     >
       <div class="carousel-caption">
         <h1>ระบบสายพานลำเลียงอัตโนมัติ</h1>
-        <p>ตรวจสอบและจัดการสายพานขนส่งลิกไนต์ระหว่างไซต์งานอย่างแม่นยำ</p>
+        <p>ตรวจสอบและจัดการสายพานเพือลำเลียงดินไปยังที่ทิ้งดิน</p>
         <a href="#services" class="btn btn-cta">ดูบริการของเรา</a>
       </div>
     </div>
@@ -63,7 +65,7 @@
       <div class="col-md-6">
         <h2 class="section-title">เกี่ยวกับโครงการ</h2>
         <p class="text-muted">
-          โครงการเหมืองแม่เมาะเป็นโครงการขุดลิกไนต์เชิงธุรกิจ ที่เน้นการบริหารทรัพยากรธรรมชาติ
+          โครงการเหมืองแม่เมาะเป็นโครงการขุดขนดินและถ่านหินลิกไนต์เชิงธุรกิจ ที่เน้นการบริหารทรัพยากรธรรมชาติ
           ควบคู่ไปกับการสร้างพลังงานอย่างมีประสิทธิภาพ โดยยึดหลักความยั่งยืนและความปลอดภัยเป็นสำคัญ
         </p>
         <ul class="list-unstyled ps-3 mt-3">
@@ -71,16 +73,22 @@
             <i class="fas fa-check-circle text-primary me-2"></i>พื้นที่โครงการ: จังหวัดลำปาง
           </li>
           <li class="mb-2">
-            <i class="fas fa-check-circle text-primary me-2"></i>ระยะเวลาก่อสร้าง: 2020 – 2025
+            <i class="fas fa-check-circle text-primary me-2"></i>ระยะเวลาสัญญา: 2018 – 2028
           </li>
           <li class="mb-2">
-            <i class="fas fa-check-circle text-primary me-2"></i>ความสามารถผลิต: XXXX เมกะวัตต์
+            <i class="fas fa-check-circle text-primary me-2"></i>ปริมาณงานขุดขนดิน: 467 ล้าน ลบ.ม.
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check-circle text-primary me-2"></i>ปริมาณงานขุดขนถ่านหินลิกไนต์: 35 ล้าน เมตริกตัน
+          </li>
+          <li class="mb-2">
+            <i class="fas fa-check-circle text-primary me-2"></i>ปริมาณงานขุดขนดิน (ส่วนที่ กฟผ ดำเนินการ): 35 ล้าน ลบ.ม.
           </li>
         </ul>
       </div>
       <div class="col-md-6 text-center fade-scroll">
         <img 
-          src="https://images.unsplash.com/photo-1506984570237-2fa2ed584c42?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+          src="{% static 'img/home/power_house.jpg' %}" 
           alt="โครงการเหมืองแม่เมาะ" 
           class="img-fluid rounded shadow-sm"
         >
@@ -100,7 +108,7 @@
           <div class="feature-icon"><i class="fas fa-mountain"></i></div>
           <div class="feature-title">Mine Progress</div>
           <p class="feature-text">
-            รายงานความคืบหน้าโครงการขุดลิกไนต์ พร้อมเอกสารตรวจสอบจากทีมวิศวกรและอาจารย์ผู้เชี่ยวชาญ
+            รายงานความคืบหน้าโครงการขุดขนดินและถ่านหินลิกไนต์ พร้อมเอกสารตรวจสอบจากทีมวิศวกรและอาจารย์ผู้เชี่ยวชาญ
           </p>
           <a href="/api/mineprogress/" class="btn btn-outline-primary mt-3">ดูความคืบหน้า</a>
         </div>
@@ -153,19 +161,19 @@
         {% endif %}
       </div>
       <div class="col-md-6 fade-scroll">
-        <form method="post" action="#">
+        <form method="post" action="{% url 'core:contact' %}">
           {% csrf_token %}
           <div class="mb-3">
             <label for="contactName" class="form-label">ชื่อ-นามสกุล</label>
-            <input type="text" class="form-control" id="contactName" placeholder="กรอกชื่อของคุณ">
+            <input type="text" class="form-control" id="contactName" name="name" placeholder="กรอกชื่อของคุณ">
           </div>
           <div class="mb-3">
             <label for="contactEmail" class="form-label">อีเมล</label>
-            <input type="email" class="form-control" id="contactEmail" placeholder="you@example.com">
+            <input type="email" class="form-control" id="contactEmail" name="email" placeholder="you@example.com">
           </div>
           <div class="mb-3">
             <label for="contactMessage" class="form-label">ข้อความ</label>
-            <textarea class="form-control" id="contactMessage" rows="4" placeholder="พิมพ์ข้อความของคุณ"></textarea>
+            <textarea class="form-control" id="contactMessage" name="message" rows="4" placeholder="พิมพ์ข้อความของคุณ"></textarea>
           </div>
           <button type="submit" class="btn btn-primary">ส่งข้อความ</button>
         </form>

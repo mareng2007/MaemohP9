@@ -132,11 +132,11 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'cashcrmDB',
-        'USER': 'mareng2007',
-        'PASSWORD': 'Skr4018kku',
-        'HOST': 'localhost',  # หรือเป็น IP หรือชื่อโฮสต์ของฐานข้อมูล
-        'PORT': '5432',  # Default PostgreSQL port
+        'NAME': os.getenv('DB_NAME'),
+        'USER': os.getenv('DB_USER'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST', 'localhost'),  # หรือเป็น IP หรือชื่อโฮสต์ของฐานข้อมูล
+        'PORT': os.getenv('DB_PORT', '5432'),  # Default PostgreSQL port
     }
 }
 
@@ -294,6 +294,11 @@ CELERY_BEAT_SCHEDULE = {
     'check_lcrequests_expiry': {
         'task': 'cashflow.tasks.check_lcrequests_expiry',
         'schedule': crontab(hour=1, minute=0),
+    },
+
+    'cleanup_expired_otps': {
+        'task': 'core.tasks.delete_expired_otps',
+        'schedule': crontab(hour=2, minute=0),
     },
 }
 

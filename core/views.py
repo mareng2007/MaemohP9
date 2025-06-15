@@ -63,6 +63,37 @@ def home(request):
     return render(request, 'core/home.html')
 
 
+def contact_submit(request):
+    """รับข้อมูลฟอร์มติดต่อแล้วส่งอีเมลถึงทีมงาน"""
+
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        email = request.POST.get("email", "").strip()
+        message = request.POST.get("message", "").strip()
+
+        if name and email and message:
+            subject = f"[Contact] Message from {name}"
+            body = (
+                f"ชื่อ: {name}\n"
+                f"อีเมล: {email}\n\n"
+                f"ข้อความ:\n{message}"
+            )
+            send_mail(
+                subject,
+                body,
+                settings.DEFAULT_FROM_EMAIL,
+                [settings.DEFAULT_FROM_EMAIL],
+                fail_silently=False,
+            )
+            messages.success(request, "ส่งข้อความเรียบร้อยแล้ว")
+        else:
+            messages.error(request, "กรุณากรอกข้อมูลให้ครบถ้วน")
+
+    return redirect("core:home")
+
+
+
+
 def register(request):
     """
     สมัครสมาชิก (Registration)
@@ -286,7 +317,8 @@ def profile_view(request):
             if profile_form.is_valid():
                 profile_form.save()
                 messages.success(request, "อัปเดตข้อมูลโปรไฟล์เรียบร้อยแล้ว")
-                return redirect('core:login')
+                # return redirect('core:login')
+                return redirect('core:profile')
         elif 'password_submit' in request.POST:
             profile_form = ProfileUpdateForm(instance=profile)
             password_form = PasswordChangeForm(user, request.POST)

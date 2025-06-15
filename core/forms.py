@@ -143,3 +143,36 @@ class EmailResendForm(forms.Form):
         return email
 
 
+class ContactForm(forms.Form):
+    """ฟอร์มติดต่อเรา (สำหรับผู้ที่ไม่ได้ล็อกอิน)"""
+
+    name = forms.CharField(
+        required=True,
+        label="ชื่อ-นามสกุล",
+        max_length=100,
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "กรอกชื่อของคุณ"}
+        ),
+    )
+
+    email = forms.EmailField(
+        required=True,
+        label="อีเมล",
+        widget=forms.EmailInput(
+            attrs={"class": "form-control", "placeholder": "you@example.com"}
+        ),
+    )
+
+    message = forms.CharField(
+        required=True,
+        label="ข้อความ",
+        widget=forms.Textarea(
+            attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "พิมพ์ข้อความของคุณ",
+            }
+        ),
+    )
+
+

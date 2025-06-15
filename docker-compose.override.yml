@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+
+  web:
+    command: python manage.py runserver 0.0.0.0:8000 --reload
+    volumes:
+      - .:/code:cached
+    environment:
+      - DJANGO_ENV=development
+
+  celery:
+    command: celery -A cashcrm_project worker -l info
+    volumes:
+      - .:/code:cached
