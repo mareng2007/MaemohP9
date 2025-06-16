@@ -956,3 +956,135 @@
      },
    }
 
+
+
+คำสั่งต่างๆ ในการใช้ docker-compose
+
+สั่งสร้างและต่ออายุใบรับรองครั้งแรก
+docker-compose up -d nginx
+
+
+รันครั้งแรกเพื่อขอใบรับรอง (one-off):
+docker-compose run --rm certbot certonly \
+  --webroot -w /var/www/certbot \
+  --email "$CERTBOT_EMAIL" \
+  --agree-tos \
+  -d "$DOMAIN" -d "www.$DOMAIN"
+
+
+
+
+
+
+ถ้าไม่มี error คุณจะได้ folder /nginx/certs/live/yourdomain.com/ มีไฟล์ fullchain.pem และ privkey.pem
+
+ถ้ายังไม่ได้สั่ง migrate/collectstatic อัตโนมัติผ่าน Compose:
+docker-compose exec web python manage.py migrate
+docker-compose exec web python manage.py collectstatic --noinput
+
+รัน migrations
+docker-compose exec web python manage.py migrate
+
+
+สร้าง superuser
+docker-compose exec web python manage.py createsuperuser
+
+
+ถ้าต้องเข้าไปลองคำสั่งใน Linux container จริง ๆ ก็แค่:
+docker-compose exec web bash
+
+ใน shell รัน
+python manage.py migrate
+python manage.py createsuperuser
+
+
+รีโหลด nginx:
+docker-compose exec nginx nginx -s reload
+
+พอ DNS ชี้ถูกต้องแล้ว คุณก็จะสามารถสั่ง docker-compose up -d nginx certbot เพื่อดึง challenge แล้วออกใบรับรองให้โดยอัตโนมัติครับ
+
+
+# สร้าง / rebuild image แล้วขึ้น container
+docker-compose up --build
+# ถ้าจะหยุด+ลบ container, network, volume
+docker-compose down -v
+
+
+ตรวจสอบสถานะ:
+docker-compose ps
+
+
+
+
+Systemd unit บนโฮสต์ (ไม่ใช่ในคอนเทนเนอร์)
+สร้างไฟล์ /etc/systemd/system/maemohp9.service:
+
+
+[Unit]
+Description=MaemohP9 Django + Docker Compose
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/ubuntu/MaemohP9       # ปรับเส้นทางให้ตรงกับโปรเจกต์คุณ
+ExecStart=/usr/local/bin/docker-compose up -d --remove-orphans
+ExecStop=/usr/local/bin/docker-compose down
+RemainAfterExit=yes
+User=ubuntu                                   # ปรับเป็น user บนโฮสต์ของคุณ
+Group=docker
+
+[Install]
+WantedBy=multi-user.target
+
+แล้วสั่งบนโฮสต์:
+sudo systemctl daemon-reload
+sudo systemctl enable maemohp9.service
+sudo systemctl start maemohp9.service
+
+
+สรุป Workflow
+1 พัฒนา
+
+แก้โค้ดใน WSL (/home/mareng2007/django/MaemohP9)
+
+ทดสอบ locally ด้วย docker-compose up --build
+
+2 ขึ้น GitHub
+
+
+git add .
+git commit -m "Your message"
+git push origin main
+
+3 Deploy บน EC2
+
+ติดตั้ง Docker และ Docker Compose
+
+# อัปเดต OS
+sudo apt update && sudo apt upgrade -y
+
+# ติดตั้ง Docker
+sudo apt install -y docker.io
+sudo systemctl enable --now docker
+
+# ติดตั้ง Docker Compose (v2.x)
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" \
+  -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# ตรวจสอบ
+docker --version
+docker-compose --version
+
+git pull โค้ด
+
+ลง .env และโฟลเดอร์ nginx/certs (SSL)
+
+sudo systemctl start maemohp9.service (หรือรีบูทเครื่อง โฮสต์จะสั่ง docker-compose up -d ให้อัตโนมัติ)
+
+4 Auto-restart คอนเทนเนอร์
+
+ใช้ restart: always ใน docker-compose.yml
+
+ใช้ systemd บนโฮสต์รัน docker-compose up -d ตอนบูท

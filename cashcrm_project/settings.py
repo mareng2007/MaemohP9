@@ -102,21 +102,21 @@ WSGI_APPLICATION = 'cashcrm_project.wsgi.application'
 ASGI_APPLICATION = 'cashcrm_project.asgi.application'
 
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
-    }
-}
-
 # CHANNEL_LAYERS = {
 #     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",
-#         "CONFIG": {
-#             # "hosts": [('localhost', 6379)],
-#             "hosts": [('127.0.0.1', 6379)],
-#         },
-#     },
+#         "BACKEND": "channels.layers.InMemoryChannelLayer"
+#     }
 # }
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            # "hosts": [('localhost', 6379)],
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
 
 
 # Database
@@ -130,13 +130,13 @@ CHANNEL_LAYERS = {
 # }
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),  # หรือเป็น IP หรือชื่อโฮสต์ของฐานข้อมูล
-        'PORT': os.getenv('DB_PORT', '5432'),  # Default PostgreSQL port
+    "default": {
+        "ENGINE":   "django.db.backends.postgresql",
+        "HOST":     os.getenv("DATABASE_HOST", "db"),       # <— ชื่อ service db
+        "PORT":     os.getenv("DATABASE_PORT", "5432"),
+        "NAME":     os.getenv("POSTGRES_DB", "mydb"),
+        "USER":     os.getenv("POSTGRES_USER", "myuser"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "mypassword"),
     }
 }
 
@@ -242,8 +242,13 @@ CORS_ALLOW_ALL_ORIGINS = True
 # CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
 # CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+# CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+# CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+
+CELERY_BROKER_URL    = f"redis://{os.getenv('REDIS_HOST','redis')}:{os.getenv('REDIS_PORT','6379')}/0"
+CELERY_RESULT_BACKEND= CELERY_BROKER_URL
+
+
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TASK_SELERIZER = 'json'

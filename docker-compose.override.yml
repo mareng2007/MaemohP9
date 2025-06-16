@@ -1,12 +1,12 @@
-version: '3.8'
+# version: '3.8'
 services:
 
   web:
-    command: python manage.py runserver 0.0.0.0:8000 --reload
+    command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code:cached
     environment:
-      - DJANGO_ENV=development
+      - ALLOWED_HOSTS=mining.utrizd.com,localhost
 
   celery:
     command: celery -A cashcrm_project worker -l info

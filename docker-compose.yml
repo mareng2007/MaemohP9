@@ -1,45 +1,133 @@
-version: '3.8'
+# version: '3.8'
 services:
 
   db:
-    image: postgres:13
+    image: postgres:15
     env_file: .env
+    restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB:       ${POSTGRES_DB}
+    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - nginx-proxy
+
 
   redis:
-    image: redis:6-alpine
+    image: redis:6
+    restart: always
+    networks:
+      - nginx-proxy
 
   web:
     build: .
-    command: gunicorn cashcrm_project.wsgi:application --bind 0.0.0.0:8000
+    container_name: maemohp9-web
+    command: >
+      bash -c "
+        python manage.py migrate &&
+        gunicorn cashcrm_project.wsgi:application --bind 0.0.0.0:8000
+      "
+    # command: gunicorn cashcrm_project.wsgi:application --bind 0.0.0.0:8000
     env_file: .env
+    labels:
+      - "VIRTUAL_HOST=mining.utrizd.com"
+      - "LETSENCRYPT_HOST=mining.utrizd.com"
+      - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
     volumes:
-      - static_volume:/vol/web/static
-      - media_volume:/vol/web/media
+      - .:/code:cached
+      # - static_volume:/vol/web/static
+      # - media_volume:/vol/web/media
+    expose:
+      - "8000"
     ports:
       - "8000:8000"
+
+    environment:
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+
     depends_on:
       - db
       - redis
+    restart: always
+    networks:
+      - nginx-proxy
 
   celery:
     build: .
+    container_name: maemohp9-celery
     command: celery -A cashcrm_project worker -l info
     env_file: .env
+    
+    volumes:
+      - .:/code:cached
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
-      - db
+      - web
+      # - db
       - redis
+    restart: always
+    networks:
+      - nginx-proxy
+
 
   celery-beat:
     build: .
-    command: celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    container_name: maemohp9-celery-beat
+    command: >
+      bash -c "
+        python manage.py migrate &&
+        celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+      "
+    # command: celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file: .env
+    volumes:
+      - .:/code:cached
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - DATABASE_HOST=${DATABASE_HOST}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:            # ถ้าไม่มี healthcheck จะถือว่ามี condition=service_started
+        condition: service_started
+    restart: always
+    networks:
+      - nginx-proxy
+
+  
 
 volumes:
   postgres_data:
   static_volume:
   media_volume:
+
+networks:
+  nginx-proxy:
+    external: true
