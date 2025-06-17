@@ -60,10 +60,10 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       
-      - VIRTUAL_HOST: mining.utrizd.com"
-      - LETSENCRYPT_HOST: mining.utrizd.com"
-      - LETSENCRYPT_EMAIL: ${LETSENCRYPT_EMAIL}"
-      - VIRTUAL_PORT: "8000"
+      - VIRTUAL_HOST=mining.utrizd.com
+      - LETSENCRYPT_HOST=mining.utrizd.com
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+      - VIRTUAL_PORT=8000
       
 
     depends_on:
