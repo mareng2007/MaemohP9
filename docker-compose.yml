@@ -48,8 +48,8 @@ services:
       # - media_volume:/vol/web/media
     expose:
       - "8000"
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
 
     environment:
       - DATABASE_HOST=${DATABASE_HOST}
