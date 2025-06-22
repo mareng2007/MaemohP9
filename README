@@ -978,8 +978,7 @@ docker network prune -f
 
 
 
-# เชื่อมสอง Compose ให้ใช้ network เดียวกัน
-docker network create nginx-proxy
+
 
 
 
@@ -1060,6 +1059,7 @@ down
 
 
 # รัน Docker-Compose ในโหมด Prod
+cd ~/django/MaemohP9
 docker compose \
   --env-file .env.prod \
   -f docker-compose.prod.yml \
@@ -1093,7 +1093,11 @@ down -v
 
 
 
+# เชื่อมสอง Compose ให้ใช้ network เดียวกัน
+docker network create nginx-proxy
 
+# ยืนยันว่าเว็บ container มา join network แล้ว
+docker network inspect nginx-proxy
 
 
 
