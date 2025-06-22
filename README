@@ -1062,32 +1062,32 @@ down
 # รัน Docker-Compose ในโหมด Prod
 docker compose \
   --env-file .env.prod \
-  -f docker compose.prod.yml \
+  -f docker-compose.prod.yml \
   up --build -d
 
 
 docker compose \
   --env-file .env.prod \
-  -f docker compose.prod.yml \
+  -f docker-compose.prod.yml \
   exec web python manage.py makemigrations --noinput
 
 
 docker compose \
   --env-file .env.prod \
-  -f docker compose.prod.yml \
+  -f docker-compose.prod.yml \
   exec web python manage.py migrate --noinput
   
 
 docker compose \
   --env-file .env.prod \
-  -f docker compose.prod.yml \
+  -f docker-compose.prod.yml \
   exec web python manage.py createsuperuser
   
 
 
 docker compose \
   --env-file .env.prod \
-  -f docker compose.prod.yml \
+  -f docker-compose.prod.yml \
 down -v
 
 

@@ -30,10 +30,10 @@ services:
 
   web:
     build: .
-    context: .
-      # ถ้า Dockerfile มี multi-stage ให้ใช้ target production
-      # args:
-      #   - DJANGO_ENV=prod
+      context: .
+        # ถ้า Dockerfile มี multi-stage ให้ใช้ target production
+        # args:
+        #   - DJANGO_ENV=prod
     image: maemohp9-web:prod
     # container_name: maemohp9-web
     command: >
