@@ -960,39 +960,34 @@
 
 # คำสั่งต่างๆ ในการใช้ docker-compose
 
+# ดูว่า container ไหนยังรันอยู่
+docker ps
+
+# หยุด container ทั้งหมด
+docker stop $(docker ps -q)
+
+# ลบ container ทั้งหมด (ทั้งที่รันแล้วและที่หยุดไปแล้ว)
+docker rm $(docker ps -aq)
 
 
-# ถ้ายังไม่ได้สั่ง migrate/collectstatic อัตโนมัติผ่าน Compose:
-docker-compose exec web python manage.py migrate
-docker-compose exec web python manage.py collectstatic --noinput
+# (ถ้าต้องการ) ลบ volume ทั้งหมดที่ไม่มี container ใดอ้างอิงอยู่
+docker volume prune -f
 
-# รัน migrations
-docker-compose exec web python manage.py migrate
-
-
-# สร้าง superuser
-docker-compose exec web python manage.py createsuperuser
+# (ถ้าต้องการ) ลบ network ที่ Docker สร้างขึ้นทั้งหมด
+docker network prune -f
 
 
-# ถ้าต้องเข้าไปลองคำสั่งใน Linux container จริง ๆ ก็แค่:
-docker-compose exec web bash
 
-# ใน shell รัน
-python manage.py migrate
-python manage.py createsuperuser
-
-# รีโหลด nginx:
-docker-compose exec nginx nginx -s reload
-
-พอ DNS ชี้ถูกต้องแล้ว คุณก็จะสามารถสั่ง docker-compose up -d nginx certbot เพื่อดึง challenge แล้วออกใบรับรองให้โดยอัตโนมัติครับ
+# เชื่อมสอง Compose ให้ใช้ network เดียวกัน
+docker network create nginx-proxy
 
 
-# สร้าง / rebuild image แล้วขึ้น container
-docker-compose up --build
-# ถ้าจะหยุด+ลบ container, network, volume
-docker-compose down -v
 
-
+cd ~/django/nginx-proxy
+docker compose down
+docker compose up -d
+docker compose logs -f letsencrypt
+docker compose logs -f nginx-proxy
 
 
 # รัน Docker-Compose ในโหมด Dev
@@ -1064,8 +1059,6 @@ down
 
 
 
-
-
 # รัน Docker-Compose ในโหมด Prod
 docker compose \
   --env-file .env.prod \
@@ -1101,8 +1094,10 @@ down -v
 
 
 
-# ตรวจสอบสถานะ:
-docker-compose ps
+
+
+
+
 
 
 
