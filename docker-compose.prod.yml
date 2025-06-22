@@ -30,7 +30,7 @@ services:
 
   web:
     build: .
-      context: .
+      # context: .
         # ถ้า Dockerfile มี multi-stage ให้ใช้ target production
         # args:
         #   - DJANGO_ENV=prod
