@@ -1141,7 +1141,7 @@ sudo systemctl start maemohp9.service
 
 # 2 ขึ้น GitHub
 
-
+; git add -A
 git add .
 git commit -m "Your message"
 git push origin main
