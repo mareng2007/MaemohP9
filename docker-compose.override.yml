@@ -4,11 +4,13 @@ services:
   web:
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
-      - .:/code:cached
+      # - .:/code:cached
+      - .:/app:rw
     environment:
-      - ALLOWED_HOSTS=mining.utrizd.com,localhost
+      - ALLOWED_HOSTS=127.0.0.1,localhost
 
   celery:
     command: celery -A cashcrm_project worker -l info
     volumes:
-      - .:/code:cached
+      # - .:/code:cached
+      - .:/app:rw

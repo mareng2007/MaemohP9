@@ -12,6 +12,8 @@ venv/
 
 # Environment variables
 .env
+.env.dev
+.env.prod
 
 # Node.js dependencies
 node_modules/

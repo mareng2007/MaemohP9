@@ -958,47 +958,30 @@
 
 
 
-คำสั่งต่างๆ ในการใช้ docker-compose
-
-สั่งสร้างและต่ออายุใบรับรองครั้งแรก
-docker-compose up -d nginx
-
-
-รันครั้งแรกเพื่อขอใบรับรอง (one-off):
-docker-compose run --rm certbot certonly \
-  --webroot -w /var/www/certbot \
-  --email "$CERTBOT_EMAIL" \
-  --agree-tos \
-  -d "$DOMAIN" -d "www.$DOMAIN"
+# คำสั่งต่างๆ ในการใช้ docker-compose
 
 
 
-
-
-
-ถ้าไม่มี error คุณจะได้ folder /nginx/certs/live/yourdomain.com/ มีไฟล์ fullchain.pem และ privkey.pem
-
-ถ้ายังไม่ได้สั่ง migrate/collectstatic อัตโนมัติผ่าน Compose:
+# ถ้ายังไม่ได้สั่ง migrate/collectstatic อัตโนมัติผ่าน Compose:
 docker-compose exec web python manage.py migrate
 docker-compose exec web python manage.py collectstatic --noinput
 
-รัน migrations
+# รัน migrations
 docker-compose exec web python manage.py migrate
 
 
-สร้าง superuser
+# สร้าง superuser
 docker-compose exec web python manage.py createsuperuser
 
 
-ถ้าต้องเข้าไปลองคำสั่งใน Linux container จริง ๆ ก็แค่:
+# ถ้าต้องเข้าไปลองคำสั่งใน Linux container จริง ๆ ก็แค่:
 docker-compose exec web bash
 
-ใน shell รัน
+# ใน shell รัน
 python manage.py migrate
 python manage.py createsuperuser
 
-
-รีโหลด nginx:
+# รีโหลด nginx:
 docker-compose exec nginx nginx -s reload
 
 พอ DNS ชี้ถูกต้องแล้ว คุณก็จะสามารถสั่ง docker-compose up -d nginx certbot เพื่อดึง challenge แล้วออกใบรับรองให้โดยอัตโนมัติครับ
@@ -1010,14 +993,120 @@ docker-compose up --build
 docker-compose down -v
 
 
-ตรวจสอบสถานะ:
+
+
+# รัน Docker-Compose ในโหมด Dev
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  up --build
+
+
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  exec web python manage.py makemigrations --noinput
+
+
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  exec web python manage.py migrate --noinput
+  
+
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  exec web python manage.py createsuperuser
+
+
+
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  stop
+
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  start
+
+
+# แก้โค้ด Python/HTML/CSS ปกติ (ใช้ volume)
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  restart web
+
+
+
+# แก้ Dockerfile / เพิ่ม library
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+  up -d
+
+
+
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+down -v
+
+
+docker compose \
+  --env-file .env.dev \
+  -f docker-compose.dev.yml \
+down
+
+
+
+
+
+
+
+
+# รัน Docker-Compose ในโหมด Prod
+docker compose \
+  --env-file .env.prod \
+  -f docker-compose.prod.yml \
+  up --build -d
+
+
+docker compose \
+  --env-file .env.prod \
+  -f docker-compose.prod.yml \
+  exec web python manage.py makemigrations --noinput
+
+
+docker compose \
+  --env-file .env.prod \
+  -f docker-compose.prod.yml \
+  exec web python manage.py migrate --noinput
+  
+
+docker compose \
+  --env-file .env.prod \
+  -f docker-compose.prod.yml \
+  exec web python manage.py createsuperuser
+
+
+docker compose -f docker-compose.prod.yml up --build -d
+
+# รัน migrations & superuser
+docker compose -f docker-compose.prod.yml exec web python manage.py migrate
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+
+
+
+
+# ตรวจสอบสถานะ:
 docker-compose ps
 
 
 
-
-Systemd unit บนโฮสต์ (ไม่ใช่ในคอนเทนเนอร์)
-สร้างไฟล์ /etc/systemd/system/maemohp9.service:
+# Systemd unit บนโฮสต์ (ไม่ใช่ในคอนเทนเนอร์)
+# สร้างไฟล์ /etc/systemd/system/maemohp9.service:
 
 
 [Unit]
@@ -1043,21 +1132,21 @@ sudo systemctl enable maemohp9.service
 sudo systemctl start maemohp9.service
 
 
-สรุป Workflow
-1 พัฒนา
+# สรุป Workflow
+# 1 พัฒนา
 
 แก้โค้ดใน WSL (/home/mareng2007/django/MaemohP9)
 
 ทดสอบ locally ด้วย docker-compose up --build
 
-2 ขึ้น GitHub
+# 2 ขึ้น GitHub
 
 
 git add .
 git commit -m "Your message"
 git push origin main
 
-3 Deploy บน EC2
+# 3 Deploy บน EC2
 
 ติดตั้ง Docker และ Docker Compose
 
@@ -1083,7 +1172,7 @@ git pull โค้ด
 
 sudo systemctl start maemohp9.service (หรือรีบูทเครื่อง โฮสต์จะสั่ง docker-compose up -d ให้อัตโนมัติ)
 
-4 Auto-restart คอนเทนเนอร์
+# 4 Auto-restart คอนเทนเนอร์
 
 ใช้ restart: always ใน docker-compose.yml
 

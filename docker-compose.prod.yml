@@ -3,7 +3,7 @@ services:
 
   db:
     image: postgres:15
-    env_file: .env
+    env_file: .env.prod
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -30,20 +30,27 @@ services:
 
   web:
     build: .
-    container_name: maemohp9-web
+    context: .
+      # ถ้า Dockerfile มี multi-stage ให้ใช้ target production
+      # args:
+      #   - DJANGO_ENV=prod
+    image: maemohp9-web:prod
+    # container_name: maemohp9-web
     command: >
       bash -c "
-        python manage.py migrate &&
-        gunicorn cashcrm_project.wsgi:application --bind 0.0.0.0:8000
+        python manage.py makemigrations --noinput &&
+        python manage.py migrate --noinput &&
+        python manage.py collectstatic --noinput &&
+        gunicorn cashcrm_project.wsgi:application --workers 2 --bind 0.0.0.0:8000
       "
     # command: gunicorn cashcrm_project.wsgi:application --bind 0.0.0.0:8000
-    env_file: .env
+    env_file: .env.prod
     # labels:
     #   - "VIRTUAL_HOST=mining.utrizd.com"
     #   - "LETSENCRYPT_HOST=mining.utrizd.com"
     #   - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
-    volumes:
-      - .:/code:cached
+    # volumes:
+    #   - .:/code:cached
       # - static_volume:/vol/web/static
       # - media_volume:/vol/web/media
     expose:
@@ -60,27 +67,32 @@ services:
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
       
-      - VIRTUAL_HOST=mining.utrizd.com
-      - LETSENCRYPT_HOST=mining.utrizd.com
+      - VIRTUAL_HOST=${VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${LETSENCRYPT_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
       - VIRTUAL_PORT=8000
       
 
     depends_on:
       - db
+          condition: service_healthy
       - redis
+          condition: service_started
     restart: always
     networks:
       - nginx-proxy
 
   celery:
     build: .
-    container_name: maemohp9-celery
+    context: .
+    image: maemohp9-celery:prod
+    # container_name: maemohp9-celery
+
     command: celery -A cashcrm_project worker -l info
-    env_file: .env
+    env_file: .env.prod
     
-    volumes:
-      - .:/code:cached
+    # volumes:
+    #   - .:/code:cached
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
@@ -92,7 +104,9 @@ services:
     depends_on:
       - web
       # - db
+          # condition: service_healthy
       - redis
+          condition: service_started
     restart: always
     networks:
       - nginx-proxy
@@ -100,16 +114,19 @@ services:
 
   celery-beat:
     build: .
-    container_name: maemohp9-celery-beat
+    context: .
+    image: maemohp9-celery-beat:prod
+    # container_name: maemohp9-celery-beat
     command: >
       bash -c "
         python manage.py migrate &&
-        celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+        celery -A cashcrm_project beat -l info
+        --scheduler django_celery_beat.schedulers:DatabaseScheduler
       "
     # command: celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    env_file: .env
-    volumes:
-      - .:/code:cached
+    env_file: .env.prod
+    # volumes:
+    #   - .:/code:cached
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
