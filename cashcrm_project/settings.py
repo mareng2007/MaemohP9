@@ -198,6 +198,10 @@ STATICFILES_DIRS = [
 #     os.path.join(BASE_DIR, 'static'),
 # ]
 
+# (OPTIONAL แต่แนะนำ) ให้ Whitenoise บีบอัด+แคชไฟล์
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+
 
 # WhiteNoise config (optional แต่ช่วยให้ compress & cache ดีขึ้น)
 WHITENOISE_AUTOREFRESH = DEBUG
