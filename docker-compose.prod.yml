@@ -31,7 +31,6 @@ services:
   web:
     build: .
     image: maemohp9-web:prod
-    # container_name: maemohp9-web
     command:
       - bash
       - -c
@@ -45,14 +44,11 @@ services:
       - "VIRTUAL_HOST=${VIRTUAL_HOST}"
       - "LETSENCRYPT_HOST=${LETSENCRYPT_HOST}"
       - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
-    # volumes:
-    #   - .:/code:cached
-      # - static_volume:/vol/web/static
-      # - media_volume:/vol/web/media
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     expose:
       - "8000"
-    # ports:
-    #   - "8000:8000"
 
     environment:
       - DATABASE_HOST=${DATABASE_HOST}
@@ -67,29 +63,23 @@ services:
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
       - VIRTUAL_PORT=8000
       
-
     depends_on:
       db:
           condition: service_healthy
       redis:
           condition: service_started
-
     restart: always
-
     networks:
       - nginx-proxy
 
   celery:
     build: .
-    # context: .
     image: maemohp9-celery:prod
-    # container_name: maemohp9-celery
-
     command: celery -A cashcrm_project worker -l info
     env_file: .env.prod
-    
-    # volumes:
-    #   - .:/code:cached
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
@@ -101,8 +91,6 @@ services:
     depends_on:
       web:
           condition: service_started
-      # - db
-          # condition: service_healthy
       redis:
           condition: service_started
     restart: always
@@ -112,9 +100,7 @@ services:
 
   celery-beat:
     build: .
-    # context: .
     image: maemohp9-celery-beat:prod
-    # container_name: maemohp9-celery-beat
     command:
       - bash
       - -c
@@ -122,8 +108,9 @@ services:
         celery -A cashcrm_project beat -l info
         --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file: .env.prod
-    # volumes:
-    #   - .:/code:cached
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}

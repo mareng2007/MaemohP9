@@ -344,19 +344,17 @@ else:
 
 
 # บังคับ HTTPS
-
-# บอก Django ว่า ถ้ามี X-Forwarded-Proto แล้วระบุเป็น https
-# ให้ถือว่า request นี้เป็น https จริง
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-# บังคับให้ cookie ทั้ง session/CSRF ทำงานเฉพาะบน HTTPS เท่านั้น
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE    = True
-
-# ระบุ domain ที่จะอนุญาตให้มาทำ CSRF POST
-# --- สร้าง CSRF_TRUSTED_ORIGINS โดยเอาแต่ละ host ไปรองรับ HTTPS ---
-CSRF_TRUSTED_ORIGINS = [
-    f"https://{host}"
-    for host in ALLOWED_HOSTS
-    if host  # กรองกรณีว่าง
-]
+if DEBUG:
+    # พัฒนา: ใช้ HTTP ธรรมดา
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_SSL_REDIRECT = False
+    # ไม่ต้องตั้ง CSRF_TRUSTED_ORIGINS (Django จะอนุญาต HTTP localhost เอง)
+else:
+    # production: EC2/Nginx+Let's Encrypt
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # เอา ALLOWED_HOSTS จาก env หรือ hardcode domain คุณ
+    CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h]
