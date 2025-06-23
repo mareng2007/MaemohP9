@@ -37,8 +37,7 @@ COPY . .
 # RUN mkdir -p /vol/web/static /vol/web/media
 
 # Collect static (optional, will be copied to final)
-RUN mkdir -p /vol/web/static /vol/web/media \
-    && python manage.py collectstatic --noinput
+RUN python manage.py collectstatic --noinput
 
 # # Default command (Prod)
 # CMD ["gunicorn", "cashcrm_project.wsgi:application", "--bind", "0.0.0.0:8000"]
@@ -49,9 +48,9 @@ FROM python:3.10-slim AS runtime
 WORKDIR /app
 
 # ติดตั้งแค่ไลบรารี runtime ของ libpq
-RUN apt-get update && apt-get install -y --no-install-recommends \
-      libpq5 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libpq5 \
+ && rm -rf /var/lib/apt/lists/*
 
 # copy venv
 COPY --from=builder /opt/venv /opt/venv
@@ -59,10 +58,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # copy application code
 COPY --from=builder /app /app
-COPY --from=builder /vol /vol
 
 # expose port
 EXPOSE 8000
 
 # runtime command
-CMD ["gunicorn", "cashcrm_project.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "cashcrm_project.wsgi:application", "--workers", "2", "--bind", "0.0.0.0:8000"]

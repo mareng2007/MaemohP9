@@ -66,6 +66,9 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 
     'django.middleware.security.SecurityMiddleware',
+
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # ← ใส่ WhiteNoise
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -180,17 +183,31 @@ USE_THOUSAND_SEPARATOR=True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
+# Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
 
+# ถ้าคุณมีโฟลเดอร์ static/ ใต้ root ของโปรเจกต์ ให้คงไว้
 STATICFILES_DIRS = [
-    # โฟลเดอร์ static ของโปรเจกต์ Django (เช่น ไฟล์ CSS, JS ทั่วไป)
-    os.path.join(BASE_DIR, 'static'),
+    BASE_DIR / 'static',
 ]
 
-STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
+# STATICFILES_DIRS = [
+#     # โฟลเดอร์ static ของโปรเจกต์ Django (เช่น ไฟล์ CSS, JS ทั่วไป)
+#     os.path.join(BASE_DIR, 'static'),
+# ]
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# WhiteNoise config (optional แต่ช่วยให้ compress & cache ดีขึ้น)
+WHITENOISE_AUTOREFRESH = DEBUG
+WHITENOISE_USE_FINDERS = True
+
+
 MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

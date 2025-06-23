@@ -119,8 +119,8 @@ services:
       - bash
       - -c
       - |
-        python manage.py migrate &&
-        celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+        celery -A cashcrm_project beat -l info
+        --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file: .env.prod
     # volumes:
     #   - .:/code:cached
