@@ -984,6 +984,11 @@ docker network rm nginx-proxy
 ; สร้าง bridge network ใหม่ (driver: bridge คือดีฟอลต์) network นี้ถูกสร้าง ก่อน สั่ง docker compose up ทั้งสองโปรเจ็กต์
 docker network create nginx-proxy
 
+; เช็คไฟล์ใบรับรอง
+ls data/certs/mining.utrizd.com.*
+
+
+
 ; รีโหลด nginx-proxy ให้รับรู้ service ใหม่
 docker kill --signal=HUP nginx-proxy
 
