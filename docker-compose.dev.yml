@@ -64,7 +64,7 @@ services:
       - nginx-proxy
 
   celery:
-    build:
+    build: .
     container_name: maemohp9-celery-dev
     command: >
       bash -c "
@@ -94,7 +94,7 @@ services:
 
 
   celery-beat:
-    build:
+    build: .
     container_name: maemohp9-celery-beat-dev
     command: >
       bash -c "
