@@ -75,7 +75,11 @@ services:
   celery:
     build: .
     image: maemohp9-celery:prod
-    command: celery -A cashcrm_project worker -l info
+    command: >
+      bash -c "
+        celery -A cashcrm_project worker -l info
+      "
+    # command: celery -A cashcrm_project worker -l info
     env_file: .env.prod
     volumes:
       - static_volume:/app/staticfiles
@@ -89,10 +93,11 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
-      web:
-          condition: service_started
       redis:
           condition: service_started
+      db:
+          condition: service_healthy
+      
     restart: always
     networks:
       - nginx-proxy
@@ -101,12 +106,11 @@ services:
   celery-beat:
     build: .
     image: maemohp9-celery-beat:prod
-    command:
-      - bash
-      - -c
-      - |
-        celery -A cashcrm_project beat -l info
-        --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    command: >
+      bash -c "
+        python manage.py migrate --noinput &&
+        celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+      "
     env_file: .env.prod
     volumes:
       - static_volume:/app/staticfiles
