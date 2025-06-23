@@ -30,20 +30,16 @@ services:
 
   web:
     build: .
-      # context: .
-        # ถ้า Dockerfile มี multi-stage ให้ใช้ target production
-        # args:
-        #   - DJANGO_ENV=prod
     image: maemohp9-web:prod
     # container_name: maemohp9-web
-    command: >
-      bash -c "
+    command:
+      - bash
+      - -c
+      - |
         python manage.py makemigrations --noinput &&
         python manage.py migrate --noinput &&
         python manage.py collectstatic --noinput &&
         gunicorn cashcrm_project.wsgi:application --workers 2 --bind 0.0.0.0:8000
-      "
-    # command: gunicorn cashcrm_project.wsgi:application --bind 0.0.0.0:8000
     env_file: .env.prod
     labels:
       - "VIRTUAL_HOST=${VIRTUAL_HOST}"
@@ -66,7 +62,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - REDIS_HOST=${REDIS_HOST}
       - REDIS_PORT=${REDIS_PORT}
-      
       - VIRTUAL_HOST=${VIRTUAL_HOST}
       - LETSENCRYPT_HOST=${LETSENCRYPT_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
@@ -78,7 +73,9 @@ services:
           condition: service_healthy
       redis:
           condition: service_started
+
     restart: always
+
     networks:
       - nginx-proxy
 
@@ -118,13 +115,12 @@ services:
     # context: .
     image: maemohp9-celery-beat:prod
     # container_name: maemohp9-celery-beat
-    command: >
-      bash -c "
+    command:
+      - bash
+      - -c
+      - |
         python manage.py migrate &&
-        celery -A cashcrm_project beat -l info
-        --scheduler django_celery_beat.schedulers:DatabaseScheduler
-      "
-    # command: celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+        celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file: .env.prod
     # volumes:
     #   - .:/code:cached

@@ -978,15 +978,26 @@ docker network prune -f
 
 
 
+# โปรเจกต์ทั้งสองไฟล์ Compose ตั้งให้ใช้ network ชื่อ nginx-proxy แบบ external ดังนั้นเราต้องสร้างมันก่อน:
+docker network rm nginx-proxy
 
+; สร้าง bridge network ใหม่ (driver: bridge คือดีฟอลต์) network นี้ถูกสร้าง ก่อน สั่ง docker compose up ทั้งสองโปรเจ็กต์
+docker network create nginx-proxy
 
+; รีโหลด nginx-proxy ให้รับรู้ service ใหม่
+docker kill --signal=HUP nginx-proxy
 
+# ยืนยันว่าเว็บ container มา join network แล้ว
+docker network inspect nginx-proxy
 
+; deploy reverse proxy:
 cd ~/django/nginx-proxy
 docker compose down
 docker compose up -d
 docker compose logs -f letsencrypt
 docker compose logs -f nginx-proxy
+
+
 
 
 # รัน Docker-Compose ในโหมด Dev
@@ -1059,6 +1070,13 @@ down
 
 
 # รัน Docker-Compose ในโหมด Prod
+
+cd ~/django/MaemohP9
+docker compose --env-file .env.prod -f docker-compose.prod.yml down
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+
+
+
 cd ~/django/MaemohP9
 docker compose \
   --env-file .env.prod \
@@ -1089,15 +1107,6 @@ docker compose \
   --env-file .env.prod \
   -f docker-compose.prod.yml \
 down -v
-
-
-
-
-# เชื่อมสอง Compose ให้ใช้ network เดียวกัน
-docker network create nginx-proxy
-
-# ยืนยันว่าเว็บ container มา join network แล้ว
-docker network inspect nginx-proxy
 
 
 
@@ -1141,9 +1150,12 @@ sudo systemctl start maemohp9.service
 
 # 2 ขึ้น GitHub
 
-; git add -A
-git add .
-git commit -m "Your message"
+git status
+git remote -v
+git add -A
+git status
+; git add .
+git commit -m "อัปเดต docker compose ใหม่"
 git push origin main
 
 # 3 Deploy บน EC2
