@@ -1130,6 +1130,8 @@ ls -l entrypoint.sh
 # ควรเห็น rwxr-xr-x หรืออย่างน้อย r-x bit ถูกตั้งไว้ เช่น
 # -rwxr-xr-x 1 ubuntu ubuntu  234 Jun 25 17:32 entrypoint.sh
 
+docker logs -f maemohp9-web-1
+
 
 
 # Systemd unit บนโฮสต์ (ไม่ใช่ในคอนเทนเนอร์)
