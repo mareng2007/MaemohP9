@@ -1121,8 +1121,14 @@ stop
 
 
 
+; ให้สิทธิ์ไฟล์นี้ executable (chmod +x entrypoint.sh) ก่อน build
+; บนเครื่อง Dev (หรือบน EC2) ให้ไปรันคำสั่งนี้ที่โฟลเดอร์โปรเจกต์ (ตำแหน่งเดียวกับไฟล์ entrypoint.sh) แล้วไฟล์จะถูกทำเครื่องหมายว่าเป็น executable:
+chmod +x entrypoint.sh
 
-
+; ตรวจสอบผลด้วย
+ls -l entrypoint.sh
+# ควรเห็น rwxr-xr-x หรืออย่างน้อย r-x bit ถูกตั้งไว้ เช่น
+# -rwxr-xr-x 1 ubuntu ubuntu  234 Jun 25 17:32 entrypoint.sh
 
 
 

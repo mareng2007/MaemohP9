@@ -1,8 +1,12 @@
-#!/usr/bin/env bash
+#!/bin/bash
 set -e
 
-echo "[Entrypoint] Making migrations & migrating database…"
-python manage.py makemigrations --noinput
-python manage.py migrate    --noinput
+echo "[Entrypoint] Migrating database…"
+python manage.py migrate --noinput
 
+echo "[Entrypoint] Collecting static files…"
+python manage.py collectstatic --noinput
+
+# สุดท้าย exec คำสั่งที่ส่งเข้ามาจาก CMD หรือ docker-compose
 exec "$@"
+

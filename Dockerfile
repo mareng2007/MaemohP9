@@ -34,6 +34,11 @@ RUN pip install --upgrade pip \
 # COPY . /code/
 COPY . .
 
+
+# สร้างไฟล์ migrations สำหรับทุกแอป (แม้จะไม่ commit ลง Git ก็จะถูกสร้างที่นี่)
+RUN python manage.py makemigrations --noinput
+
+
 # # สร้างโฟลเดอร์ static & media
 # RUN mkdir -p /vol/web/static /vol/web/media
 
@@ -62,10 +67,10 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
 
 # expose port
 EXPOSE 8000
 
-# runtime command
+# ให้ entrypoint.sh เป็นจุดเริ่มต้น แล้วตามด้วยคำสั่ง gunicorn
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "cashcrm_project.wsgi:application", "--workers", "2", "--bind", "0.0.0.0:8000"]
