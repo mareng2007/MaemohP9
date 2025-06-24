@@ -31,14 +31,14 @@ services:
   web:
     build: .
     image: maemohp9-web:prod
+    entrypoint: ["/entrypoint.sh"]
     command:
-      - bash
-      - -c
-      - |
-        python manage.py makemigrations --noinput &&
-        python manage.py migrate --noinput &&
-        python manage.py collectstatic --noinput &&
-        gunicorn cashcrm_project.wsgi:application --workers 2 --bind 0.0.0.0:8000
+      - gunicorn
+      - "cashcrm_project.wsgi:application"
+      - "--workers"
+      - "2"
+      - "--bind"
+      - "0.0.0.0:8000"
     env_file: .env.prod
     labels:
       - "VIRTUAL_HOST=${VIRTUAL_HOST}"
@@ -75,11 +75,8 @@ services:
   celery:
     build: .
     image: maemohp9-celery:prod
-    command: >
-      bash -c "
-        celery -A cashcrm_project worker -l info
-      "
-    # command: celery -A cashcrm_project worker -l info
+    entrypoint: ["/entrypoint.sh"]
+    command: ["celery", "-A", "cashcrm_project", "worker", "-l", "info"]
     env_file: .env.prod
     volumes:
       - static_volume:/app/staticfiles
@@ -106,11 +103,16 @@ services:
   celery-beat:
     build: .
     image: maemohp9-celery-beat:prod
-    command: >
-      bash -c "
-        python manage.py migrate --noinput &&
-        celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-      "
+    entrypoint: ["/entrypoint.sh"]
+    command:
+      - celery
+      - "-A"
+      - "cashcrm_project"
+      - "beat"
+      - "-l"
+      - "info"
+      - "--scheduler"
+      - "django_celery_beat.schedulers:DatabaseScheduler"
     env_file: .env.prod
     volumes:
       - static_volume:/app/staticfiles

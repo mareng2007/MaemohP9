@@ -23,13 +23,14 @@ RUN apt-get update \
 # RUN pip install --upgrade pip \
 #  && pip install -r requirements.txt
 
+# สร้าง venv และติดตั้ง Python packages
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# copy source code
+# คัดลอก source code ทั้งหมด
 # COPY . /code/
 COPY . .
 
@@ -52,12 +53,16 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends libpq5 \
  && rm -rf /var/lib/apt/lists/*
 
-# copy venv
+# copy venv และ source จาก builder
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /app /app
 ENV PATH="/opt/venv/bin:$PATH"
 
-# copy application code
-COPY --from=builder /app /app
+# นำ entrypoint เข้ามาใน image
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 # expose port
 EXPOSE 8000
