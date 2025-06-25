@@ -50,6 +50,9 @@ Thumbs.db
 data/raw/*
 *.xlsm
 
+# Django collectstatic
+/staticfiles/
+
 
 # ถ้ามีไฟล์ override สำหรับเครื่องเราเอง
 # docker-compose.override.yml
