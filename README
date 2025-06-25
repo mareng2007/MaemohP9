@@ -1014,8 +1014,8 @@ docker compose \
 
 docker compose \
   --env-file .env.dev \
-  -f docker-compose.dev.yml \
-  exec web python manage.py makemigrations --noinput
+  -f docker-compose.dev.yml run --rm web \
+  python manage.py makemigrations
 
 
 docker compose \
@@ -1182,6 +1182,14 @@ git status
 ; git add .
 git commit -m "อัปเดต docker compose ใหม่"
 git push origin main
+
+# เพิ่มไฟล์ migrations ทั้งหมด
+git add */migrations/*.py */migrations/__init__.py
+
+# Commit และ push
+git commit -m "Add initial migrations for all apps"
+git push origin main
+
 
 # 3 Deploy บน EC2
 

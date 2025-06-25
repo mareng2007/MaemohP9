@@ -1,6 +1,7 @@
 # Byte-compiled / cache files
 __pycache__/
-migrations
+#*/migrations/
+# **/migrations/
 *.py[cod]
 *.pyo
 *.pyd
