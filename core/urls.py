@@ -18,19 +18,19 @@ urlpatterns = [
     path('activation-sent/', views.home, name='registration_sent'),              # (optional) หลังส่งอีเมล
 
 
-    # path('activate/<uidb64>/<token>/', views.activate, name='activate'),         # ยืนยันอีเมล
+    path('activate/<uidb64>/<token>/', views.activate, name='activate'),         # ยืนยันอีเมล
     
-    # → New: Query-string based activation URL
-    #    reverse('core:activate') → /activate/?uid=<uidb64>&token=<token>
-    path('activate/', views.activate, name='activate'),
+    # # → New: Query-string based activation URL
+    # #    reverse('core:activate') → /activate/?uid=<uidb64>&token=<token>
+    # path('activate/', views.activate, name='activate'),
 
-    # → Legacy fallback: path-segment based link
-    #    /activate/<uidb64>/<token>/ 
-    path(
-        'activate/<uidb64>/<token>/',
-        views.activate,
-        name='activate_legacy'
-    ),
+    # # → Legacy fallback: path-segment based link
+    # #    /activate/<uidb64>/<token>/ 
+    # path(
+    #     'activate/<uidb64>/<token>/',
+    #     views.activate,
+    #     name='activate_legacy'
+    # ),
 
 
     path('resend-activation/', views.resend_activation, name='resend_activation'),  # ส่งลิงก์ยืนยันใหม่

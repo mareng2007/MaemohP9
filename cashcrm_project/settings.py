@@ -31,7 +31,13 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'fallback-secret-if-you-forgot')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+# ALLOWED_HOSTS ให้กำหนดเป็น comma-separated list
+allowed = os.getenv('ALLOWED_HOSTS', '')
+if allowed:
+    ALLOWED_HOSTS = [h.strip() for h in allowed.split(',')]
+else:
+    # ดีฟอลต์ให้ localhost ถ้าไม่กำหนด
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -358,3 +364,9 @@ else:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     # เอา ALLOWED_HOSTS จาก env หรือ hardcode domain คุณ
     CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h]
+
+
+
+# อ่านค่าจาก .env (Docker หรือ Host จะต้องเซ็ต ENV vars เหล่านี้ไว้)
+ACTIVATION_SCHEME = os.getenv('ACTIVATION_SCHEME', 'http')
+ACTIVATION_DOMAIN = os.getenv('ACTIVATION_DOMAIN', 'localhost:8000')
