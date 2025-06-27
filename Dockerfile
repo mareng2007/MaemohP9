@@ -12,15 +12,15 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 COPY requirements.txt .
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+ && pip install --no-cache-dir -r requirements.txt
 
-# คัดลอกซอร์สโค้ดเข้าไป
+# คัดลอกโค้ดเข้าไป
 COPY . .
 
-# สร้าง migrations อัตโนมัติ แล้วเก็บ .py ไว้ใน image
+# ทำ migrations อัตโนมัติ (ไม่บังคับ แต่ช่วยให้ schema พร้อม)
 RUN python manage.py makemigrations --noinput
 
-# รัน collectstatic
+# รัน collectstatic ตอน build
 RUN python manage.py collectstatic --noinput
 
 # --- Runtime stage ---
@@ -36,18 +36,16 @@ RUN apt-get update \
 COPY --from=builder /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# นำทั้ง /app จาก builder มาต่อ (รวม migrations ที่สร้างแล้ว)
+# นำโค้ดและ staticfiles ที่สร้างไว้ ไปใส่ใน runtime image
 COPY --from=builder /app /app
 
-# ติดตั้ง entrypoint script
+# ติดตั้ง entrypoint script (ซึ่งตอนนี้จะไม่รัน collectstatic อีก)
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
-
 EXPOSE 8000
-
-# คำสั่ง default จะถูก exec ต่อท้ายใน entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "cashcrm_project.wsgi:application", "--workers", "2", "--bind", "0.0.0.0:8000"]
+
 
 

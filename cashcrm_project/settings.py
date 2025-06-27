@@ -191,18 +191,18 @@ USE_THOUSAND_SEPARATOR=True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-# STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
+# STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_ROOT = os.path.join(BASE_DIR,'staticfiles')
 
 # ถ้าคุณมีโฟลเดอร์ static/ ใต้ root ของโปรเจกต์ ให้คงไว้
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-]
-
 # STATICFILES_DIRS = [
-#     # โฟลเดอร์ static ของโปรเจกต์ Django (เช่น ไฟล์ CSS, JS ทั่วไป)
-#     os.path.join(BASE_DIR, 'static'),
+#     BASE_DIR / 'static',
 # ]
+
+STATICFILES_DIRS = [
+    # โฟลเดอร์ static ของโปรเจกต์ Django (เช่น ไฟล์ CSS, JS ทั่วไป)
+    os.path.join(BASE_DIR, 'static'),
+]
 
 # (OPTIONAL แต่แนะนำ) ให้ Whitenoise บีบอัด+แคชไฟล์
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'

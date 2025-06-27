@@ -34,9 +34,11 @@ services:
     # ENTRYPOINT จะทำ migrations + collectstatic ให้ก่อน แล้วรัน CMD ต่อไปนี้ (runserver)
     command: python manage.py runserver 0.0.0.0:8000
     env_file: .env.dev
+    # ไม่ mount staticfiles ทับ
     volumes:
-      - .:/app:rw                   # โค้ดโปรเจกต์ใน container
-      - ./static:/app/static:ro     # โฟลเดอร์ static บน host → /app/static ใน container
+      - .:/app:rw
+      - ./static:/app/static    # สำหรับไฟล์ static แบบดิบ (เช่น CSS/JS ที่แก้ระหว่าง dev)
+
     ports:
       - "8000:8000"
 
