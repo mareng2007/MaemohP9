@@ -1,13 +1,29 @@
 {# D:\Django\MaemohP9\core\templates\core\activation_email.html #}
 
-สวัสดี {{ user.username }},
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ยืนยันการสมัครสมาชิก MaemohMine</title>
+</head>
+<body style="font-family: sans-serif; line-height:1.6; color:#333;">
+  <h2>สวัสดี {{ user.username }}!</h2>
+  <p>ขอบคุณที่ลงทะเบียนกับ <strong>MaemohMine Project</strong>!</p>
+  <p>กรุณาคลิกปุ่มด้านล่างเพื่อยืนยันอีเมลและเปิดใช้งานบัญชีของคุณ (ใช้ได้ภายใน 24 ชั่วโมง):</p>
+  <p>
+    <a href="{{ activation_url }}"
+       style="display:inline-block;padding:10px 20px;background-color:#007bff;color:#fff;text-decoration:none;border-radius:4px;">
+      ยืนยันอีเมลของฉัน
+    </a>
+  </p>
+  <p>หากปุ่มข้างต้นไม่ทำงาน ให้คัดลอกลิงก์นี้ไปวางในเบราเซอร์ของคุณ:</p>
+  <p><a href="{{ activation_url }}">{{ activation_url }}</a></p>
+  <hr>
+  <p style="font-size:0.9em;color:#666;">
+    หากคุณไม่ได้ดำเนินการนี้ กรุณาเพิกเฉยอีเมลฉบับนี้<br>
+    — ทีมงาน MaemohMine Project
+  </p>
+</body>
+</html>
 
-กรุณาคลิกที่ลิงก์ด้านล่างเพื่อยืนยันอีเมลและเปิดใช้งานบัญชีของคุณ (ใช้งานได้ภายใน 24 ชั่วโมง):
-
-{{ activation_url }}
-
-หากคุณไม่ได้สมัครสมาชิกกับเรา กรุณาละเว้นอีเมลฉบับนี้
-
-ขอบคุณครับ,
-ทีมงาน MaemohMine Project
 

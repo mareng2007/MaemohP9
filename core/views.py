@@ -10,10 +10,15 @@ from django.contrib.auth.forms import PasswordChangeForm, AuthenticationForm
 from django.core.mail import send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.core.mail       import EmailMultiAlternatives
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth.models import Group
 from datetime import timedelta, date
+
+from urllib.parse import urlparse, unquote
+
+
 from .forms import (
     RegistrationForm, CustomLoginForm,
     OTPVerifyForm, ProfileUpdateForm,
@@ -127,106 +132,91 @@ def register(request):
             )
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
 
-            
-            # activation_url = request.build_absolute_uri(
-            #     reverse('core:activate', kwargs={'uidb64': uidb64, 'token': token_obj.token})
-            # )
 
-            # # ← build activation link as query‐string
-            # base_activate = request.build_absolute_uri(reverse('core:activate'))
-            # activation_url = f"{base_activate}?uid={uidb64}&token={token_obj.token}"
-
-             # สร้าง path แล้วประกอบเป็น full URL ด้วย ENV vars
-            path = reverse('core:activate', kwargs={
-                'uidb64': uidb64,
-                'token': token_obj.token
-            })
-            activation_url = f"{settings.ACTIVATION_SCHEME}://{settings.ACTIVATION_DOMAIN}{path}"
+            # สร้าง path + query-string และใส่ domain+scheme จาก ENV
+            path = reverse('core:activate')
+            activation_url = (
+                f"{settings.ACTIVATION_SCHEME}://"
+                f"{settings.ACTIVATION_DOMAIN}"
+                f"{path}?uid={uidb64}&token={token_obj.token}"
+            )
 
 
             subject = 'ยืนยันการสมัครสมาชิก MaemohMine Project'
-            message = render_to_string('core/activation_email.html', {
+            from_email   = settings.DEFAULT_FROM_EMAIL
+            to           = [user.email]
+            text_content = render_to_string('core/activation_email.txt', {
                 'user': user,
                 'activation_url': activation_url,
             })
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
-            )
+            html_content = render_to_string('core/activation_email.html', {
+                'user': user,
+                'activation_url': activation_url,
+            })
+
+            # ส่งเมล
+            msg = EmailMultiAlternatives(subject, text_content, from_email, to)
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=False)
+
             return render(request, 'core/registration_sent.html', {'email': user.email})
     else:
         form = RegistrationForm()
+
     return render(request, 'core/register.html', {'form': form})
 
 
-def activate(request, uidb64, token):
+
+def activate(request, uidb64=None, token=None):
     """
-    ยืนยันอีเมลผ่านลิงก์ activation_url
-    → user.is_active = True, token.is_used = True
+    ยืนยันอีเมล
+    1) path-segment (/activate/<uidb64>/<token>/)
+    2) query-string (?uid=…&token=…)
+    3) SafeLinks preview (?url=<encoded full url>)
     """
+    # ➀ query-string
+    if not uidb64 or not token:
+        uidb64 = request.GET.get('uid')
+        token  = request.GET.get('token')
+
+    # ➁ SafeLinks preview
+    if not uidb64 or not token:
+        raw = request.GET.get('url')
+        if raw:
+            full = unquote(raw)
+            p = urlparse(full)
+            parts = [seg for seg in p.path.split('/') if seg]
+            if len(parts) >= 3 and parts[0] == 'activate':
+                uidb64, token = parts[1], parts[2]
+
+    # ถ้ายังไม่มีทั้งคู่ → invalid
+    if not uidb64 or not token:
+        return render(request, 'core/activation_invalid.html')
+
+    # decode uid & lookup user
     try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
+        uid  = force_str(urlsafe_base64_decode(uidb64))
         user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+    except Exception:
         user = None
 
     if user:
         try:
-            token_obj = EmailActivation.objects.get(user=user, token=token, is_used=False)
+            tok = EmailActivation.objects.get(
+                user=user, token=token, is_used=False
+            )
         except EmailActivation.DoesNotExist:
-            token_obj = None
+            tok = None
 
-        if token_obj and timezone.now() <= token_obj.expired_at:
+        if tok and timezone.now() <= tok.expired_at:
             user.is_active = True
-            user.save()
-            token_obj.is_used = True
-            token_obj.save()
+            user.save(update_fields=['is_active'])
+            tok.is_used = True
+            tok.save(update_fields=['is_used'])
             messages.success(request, "ยืนยันอีเมลสำเร็จ! กรุณาเข้าสู่ระบบเพื่อใช้งาน")
             return redirect('core:login')
+
     return render(request, 'core/activation_invalid.html')
-
-# def activate(request):
-#     """
-#     ยืนยันอีเมลผ่านลิงก์ activation_url
-#     รับค่าได้ทั้งจาก query‐string และ fallback path‐segments
-#     """
-#     # 1) try query‐string first
-#     uidb64 = request.GET.get('uid')
-#     token  = request.GET.get('token')
-
-#     # 2) if missing, fallback to existing path segments /activate/<uidb64>/<token>/
-#     if not uidb64 or not token:
-#         parts = [p for p in request.path_info.split('/') if p]
-#         # expect ['activate', uidb64, token]
-#         if len(parts) >= 3 and parts[0] == 'activate':
-#             uidb64, token = parts[1], parts[2]
-
-#     # decode & validate
-#     try:
-#         uid = force_str(urlsafe_base64_decode(uidb64))
-#         user = User.objects.get(pk=uid)
-#     except Exception:
-#         user = None
-
-#     if user:
-#         try:
-#             token_obj = EmailActivation.objects.get(user=user, token=token, is_used=False)
-#         except EmailActivation.DoesNotExist:
-#             token_obj = None
-
-#         if token_obj and timezone.now() <= token_obj.expired_at:
-#             user.is_active = True
-#             user.save(update_fields=['is_active'])
-#             token_obj.is_used = True
-#             token_obj.save(update_fields=['is_used'])
-#             messages.success(request, "ยืนยันอีเมลสำเร็จ! กรุณาเข้าสู่ระบบเพื่อใช้งาน")
-#             return redirect('core:login')
-
-#     return render(request, 'core/activation_invalid.html')
-
 
 
 def resend_activation(request):
@@ -238,81 +228,51 @@ def resend_activation(request):
         if form.is_valid():
             email = form.cleaned_data['email'].lower()
             user = User.objects.get(email=email, is_active=False)
-            # ทำให้ token เดิมหมดอายุ
+
+            # Make old tokens used up
             EmailActivation.objects.filter(user=user, is_used=False).update(is_used=True)
-            # สร้าง token ใหม่
+
+            # Create new token
             new_tok = EmailActivation.objects.create(
                 user=user,
                 expired_at=timezone.now() + timedelta(days=1),
             )
             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
 
-            # activation_url = request.build_absolute_uri(
-            #     reverse('core:activate', kwargs={'uidb64': uidb64, 'token': new_tok.token})
-            # )
+            # Build activation_url exactly like in register()
+            path = reverse('core:activate')
+            activation_url = (
+                f"{settings.ACTIVATION_SCHEME}://"
+                f"{settings.ACTIVATION_DOMAIN}"
+                f"{path}?uid={uidb64}&token={new_tok.token}"
+            )
 
-            path = reverse('core:activate', kwargs={
-                'uidb64': uidb64,
-                'token': new_tok.token
-            })
-            activation_url = f"{settings.ACTIVATION_SCHEME}://{settings.ACTIVATION_DOMAIN}{path}"
-
+            # Render both text & html templates
             subject = 'ส่งลิงก์ยืนยันอีเมลใหม่ – MaemohMine Project'
-            message = render_to_string('core/activation_email.html', {
+            from_email   = settings.DEFAULT_FROM_EMAIL
+            to           = [user.email]
+            text_content = render_to_string('core/activation_email.txt', {
                 'user': user,
                 'activation_url': activation_url,
             })
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
-            )
+            html_content = render_to_string('core/activation_email.html', {
+                'user': user,
+                'activation_url': activation_url,
+            })
+
+            # Send via EmailMultiAlternatives
+            msg = EmailMultiAlternatives(subject, text_content, from_email, to)
+            msg.attach_alternative(html_content, "text/html")
+            msg.send(fail_silently=False)
+
             messages.success(request, "ส่งลิงก์ยืนยันอีเมลใหม่แล้ว")
             return redirect('core:login')
+
     else:
         form = EmailResendForm()
+
     return render(request, 'core/resend_activation.html', {'form': form})
 
-
-# def resend_activation(request):
-#     """
-#     ส่งลิงก์ยืนยันอีเมลใหม่ กรณี token เดิมหมดอายุ
-#     """
-#     if request.method == 'POST':
-#         form = EmailResendForm(request.POST)
-#         if form.is_valid():
-#             email = form.cleaned_data['email'].lower()
-#             user = User.objects.get(email=email, is_active=False)
-#             EmailActivation.objects.filter(user=user, is_used=False).update(is_used=True)
-#             new_tok = EmailActivation.objects.create(
-#                 user=user,
-#                 expired_at=timezone.now() + timedelta(days=1),
-#             )
-#             uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-
-#             # ← again use query‐string
-#             base_activate = request.build_absolute_uri(reverse('core:activate'))
-#             activation_url = f"{base_activate}?uid={uidb64}&token={new_tok.token}"
-
-#             subject = 'ส่งลิงก์ยืนยันอีเมลใหม่ – MaemohMine Project'
-#             message = render_to_string('core/activation_email.html', {
-#                 'user': user,
-#                 'activation_url': activation_url,
-#             })
-#             send_mail(
-#                 subject,
-#                 message,
-#                 settings.DEFAULT_FROM_EMAIL,
-#                 [user.email],
-#                 fail_silently=False,
-#             )
-#             messages.success(request, "ส่งลิงก์ยืนยันอีเมลใหม่แล้ว")
-#             return redirect('core:login')
-#     else:
-#         form = EmailResendForm()
-#     return render(request, 'core/resend_activation.html', {'form': form})
 
 
 def login_view(request):

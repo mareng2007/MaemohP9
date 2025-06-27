@@ -18,8 +18,11 @@ urlpatterns = [
     path('activation-sent/', views.home, name='registration_sent'),              # (optional) หลังส่งอีเมล
 
 
-    path('activate/<uidb64>/<token>/', views.activate, name='activate'),         # ยืนยันอีเมล
+    # path('activate/<uidb64>/<token>/', views.activate, name='activate'),         # ยืนยันอีเมล
     
+    # # ← เปลี่ยนให้เป็นแบบ query‐string ล้วน
+    # path('activate/', views.activate, name='activate'),
+
     # # → New: Query-string based activation URL
     # #    reverse('core:activate') → /activate/?uid=<uidb64>&token=<token>
     # path('activate/', views.activate, name='activate'),
@@ -31,6 +34,11 @@ urlpatterns = [
     #     views.activate,
     #     name='activate_legacy'
     # ),
+
+    # 1) Query-string based:
+    path('activate/', views.activate, name='activate'),
+    # 2) Legacy path-segment based:
+    path('activate/<uidb64>/<token>/', views.activate, name='activate_segment'),
 
 
     path('resend-activation/', views.resend_activation, name='resend_activation'),  # ส่งลิงก์ยืนยันใหม่
