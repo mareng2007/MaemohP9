@@ -1,0 +1,93 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Flowchart Builder{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <h2 class="mb-3">Flowchart Builder</h2>
+  <form method="post" id="builder-form">
+    {% csrf_token %}
+    <div class="row">
+      <div class="col-md-2">
+        <div class="card p-2 mb-2">
+          <div class="drag-drawflow btn btn-light mb-1" draggable="true" data-node="start">Start</div>
+          <div class="drag-drawflow btn btn-light mb-1" draggable="true" data-node="process">Process</div>
+          <div class="drag-drawflow btn btn-light mb-1" draggable="true" data-node="decision">Decision</div>
+          <div class="drag-drawflow btn btn-light" draggable="true" data-node="end">End</div>
+        </div>
+        <div class="mb-3">
+          {{ form.name.label_tag }}
+          {{ form.name }}
+        </div>
+        {{ form.content }}
+        <button type="submit" class="btn btn-success w-100">Save</button>
+        <button type="button" id="preview-btn" class="btn btn-outline-secondary w-100 mt-2">Preview</button>
+        <textarea id="mermaid-code" class="form-control mt-2" rows="6" readonly></textarea>
+      </div>
+      <div class="col-md-10">
+        <div id="drawflow" class="border" style="height:600px;"></div>
+        <div id="preview" class="border mt-3 p-2"></div>
+      </div>
+    </div>
+  </form>
+</div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/drawflow/dist/drawflow.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>
+  const drawflow = document.getElementById('drawflow');
+  const editor = new Drawflow(drawflow);
+  editor.start();
+
+  let drag;
+  document.querySelectorAll('.drag-drawflow').forEach(el => {
+    el.addEventListener('dragstart', ev => drag = ev.target.getAttribute('data-node'));
+  });
+  drawflow.addEventListener('dragover', ev => ev.preventDefault());
+  drawflow.addEventListener('drop', ev => {
+    ev.preventDefault();
+    editor.addNode(drag, 1, 1, ev.offsetX, ev.offsetY, {label: drag}, {}, `<div class="p-2 rounded border bg-white">${drag}</div>`);
+  });
+
+  function toMermaid() {
+    const data = editor.export().drawflow.Home.data;
+    let code = 'flowchart TD\n';
+    for (const id in data) {
+      const node = data[id];
+      const label = node.name;
+      if (label === 'decision') {
+        code += `  ${id}{${label}}\n`;
+      } else if (label === 'start' || label === 'end') {
+        code += `  ${id}(["${label}"])\n`;
+      } else {
+        code += `  ${id}["${label}"]\n`;
+      }
+    }
+    for (const id in data) {
+      const node = data[id];
+      for (const outputKey in node.outputs) {
+        node.outputs[outputKey].connections.forEach(c => {
+          code += `  ${id} --> ${c.node}\n`;
+        });
+      }
+    }
+    return code;
+  }
+
+  function updateMermaid() {
+    const code = toMermaid();
+    document.getElementById('mermaid-code').value = code;
+    document.getElementById('id_content').value = code;
+    const preview = document.getElementById('preview');
+    preview.innerHTML = `<pre class="mermaid">${code}</pre>`;
+    mermaid.init(undefined, preview);
+  }
+
+  document.getElementById('preview-btn').addEventListener('click', updateMermaid);
+  document.getElementById('builder-form').addEventListener('submit', updateMermaid);
+
+  document.getElementById('id_content').classList.add('d-none');
+  mermaid.initialize({ startOnLoad: false });
+</script>
+{% endblock %}

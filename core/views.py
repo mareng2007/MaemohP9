@@ -470,5 +470,10 @@ def dashboard_view(request):
     return render(request, 'core/dashboard.html', context)
 
 
+@login_required
+def scoreboard_view(request):
+    profiles = UserProfile.objects.select_related('user').order_by('-score')
+    return render(request, 'core/scoreboard.html', {'profiles': profiles})
+
 
 

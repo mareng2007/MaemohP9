@@ -1,0 +1,25 @@
+{% extends 'core/base.html' %}
+{% block title %}Scoreboard{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="section-title">Scoreboard</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th class="text-end">Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for prof in profiles %}
+      <tr>
+        <td>{{ prof.user.username }}</td>
+        <td class="text-end">{{ prof.score }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="2">No data.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -17,6 +17,7 @@ class UserProfile(models.Model):
     last_name = models.CharField(max_length=50, blank=True, verbose_name="นามสกุล")
     phone_number = models.CharField(max_length=20, blank=True, verbose_name="เบอร์มือถือ")
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True, verbose_name="รูปโปรไฟล์")
+    score = models.IntegerField(default=0, verbose_name="คะแนน")
     # สามารถขยายฟิลด์ตามต้องการ
 
     def __str__(self):
@@ -50,4 +51,35 @@ class OTP(models.Model):
 
     def __str__(self):
         return f"{self.email} → {self.code} (Used: {self.is_used})"
+    
+
+
+class ScoreTransaction(models.Model):
+    """Record of point transfers between users."""
+
+    from_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='scores_sent')
+    to_user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='scores_received')
+    amount = models.IntegerField()
+    reason = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.from_user} -> {self.to_user} ({self.amount})"
+
+    @staticmethod
+    def transfer(from_user, to_user, amount, reason=""):
+        if not from_user or not to_user or amount == 0:
+            return None
+        from_profile = from_user.profile
+        to_profile = to_user.profile
+        from_profile.score -= amount
+        to_profile.score += amount
+        from_profile.save(update_fields=["score"])
+        to_profile.save(update_fields=["score"])
+        return ScoreTransaction.objects.create(
+            from_user=from_user,
+            to_user=to_user,
+            amount=amount,
+            reason=reason,
+        )
 

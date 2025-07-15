@@ -1,0 +1,64 @@
+{% extends 'core/base.html' %}
+{% block title %}Task Detail{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">{{ task.title }}</h2>
+  <p>{{ task.description }}</p>
+  <p><strong>ผู้สร้าง:</strong> {{ task.created_by }}</p>
+  <p><strong>ผู้รับผิดชอบ:</strong> {{ task.assigned_to }}</p>
+  {% if task.assigned_team %}
+  <p><strong>ทีม:</strong> {{ task.assigned_team }}</p>
+  {% endif %}
+  <p><strong>สถานะ:</strong> {{ task.get_status_display }}</p>
+  <a href="{% url 'workflow:task-edit' task.id %}" class="btn btn-primary">แก้ไข</a>
+
+  <hr class="my-4">
+  <h4 class="mb-3">Reviews</h4>
+  <ul class="list-group mb-3">
+    {% for review in reviews %}
+    <li class="list-group-item">
+      <strong>{{ review.reviewer }}</strong>
+      {% if review.approved %}
+        <span class="badge bg-success ms-2">Approved</span>
+      {% endif %}
+      <p class="mb-1 mt-2">{{ review.comment }}</p>
+      <small class="text-muted">{{ review.created_at|date:"Y-m-d H:i" }}</small>
+    </li>
+    {% empty %}
+    <li class="list-group-item text-muted">No reviews yet.</li>
+    {% endfor %}
+  </ul>
+
+  <h5>เพิ่มรีวิว</h5>
+  <form method="post">
+    {% csrf_token %}
+    {{ review_form.as_p }}
+    <button type="submit" class="btn btn-primary">ส่งรีวิว</button>
+  </form>
+
+  <hr class="my-4">
+  <h4 class="mb-3">Files</h4>
+  <ul class="list-group mb-3">
+    {% for f in files %}
+    <li class="list-group-item d-flex justify-content-between align-items-start">
+      <div>
+        <a href="{{ f.file.url }}">Version {{ f.version }}</a>
+        <small class="text-muted ms-2">{{ f.uploaded_by }} - {{ f.uploaded_at|date:"Y-m-d H:i" }}</small>
+      </div>
+      {% if forloop.counter0 > 0 %}
+        <a href="{% url 'workflow:taskfile-diff' f.id %}" class="btn btn-sm btn-outline-secondary">Diff</a>
+      {% endif %}
+    </li>
+    {% empty %}
+    <li class="list-group-item text-muted">No files uploaded.</li>
+    {% endfor %}
+  </ul>
+
+  <h5>อัปโหลดไฟล์ใหม่</h5>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ file_form.as_p }}
+    <button type="submit" class="btn btn-secondary">อัปโหลด</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}
+{% block title %}{% if form.instance.pk %}Edit Task{% else %}Create Task{% endif %}{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-4">{% if form.instance.pk %}แก้ไข Task{% else %}สร้าง Task{% endif %}</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">บันทึก</button>
+  </form>
+</div>
+{% endblock %}

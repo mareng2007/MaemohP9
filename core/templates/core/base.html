@@ -244,6 +244,13 @@
           <li class="nav-item"><a class="nav-link" href="#services">บริการของเรา</a></li>
           <li class="nav-item"><a class="nav-link" href="#contact">ติดต่อ</a></li>
 
+         <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.namespace == 'flowchart' %}active{% endif %}" href="{% url 'flowchart:list' %}">
+              <i class="fas fa-project-diagram me-1"></i>Flowcharts
+            </a>
+          </li>
+
+
           {% if user.is_authenticated %}
             {# ถ้า user in group 'cashflow_access' #}
             {% if user|has_group:"cashflow_access" %}
@@ -292,6 +299,28 @@
                 </ul>
               </li>
             {% endif %}
+
+           <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.namespace == 'workflow' %}active{% endif %}"
+                 href="{% url 'workflow:task-list' %}">
+                <i class="fas fa-tasks me-1"></i>Workflow
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link {% if request.resolver_match.namespace == 'teams' %}active{% endif %}"
+                 href="{% url 'teams:team-list' %}">
+                <i class="fas fa-users me-1"></i>Teams
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'core:scoreboard' %}">
+                <i class="fas fa-trophy me-1"></i>Scoreboard
+              </a>
+            </li>
+
+
 
             {# ถ้า user in group 'fleet_access' #}
             {% if user|has_group:"fleet_access" %}

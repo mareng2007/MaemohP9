@@ -1071,6 +1071,15 @@ down
 
 
 
+; สร้าง Django app ใหม่ (startapp)
+docker-compose \
+  --env-file .env.dev \
+ -f docker-compose.dev.yml exec web \
+    python manage.py startapp workflow
+    
+
+sudo chown -R $(id -u):$(id -g) .
+
 
 
 

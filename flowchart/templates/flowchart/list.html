@@ -1,0 +1,18 @@
+{% extends "core/base.html" %}
+{% block title %}Flowcharts{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-3">Flowcharts</h2>
+  <a class="btn btn-success mb-3" href="{% url 'flowchart:create' %}">Create New</a>
+  <ul class="list-group">
+    {% for chart in object_list %}
+      <li class="list-group-item d-flex justify-content-between align-items-center">
+        <a href="{% url 'flowchart:detail' chart.pk %}">{{ chart.name }}</a>
+        <span class="text-muted">updated {{ chart.updated_at|date:"Y-m-d" }}</span>
+      </li>
+    {% empty %}
+      <li class="list-group-item">No flowcharts yet.</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

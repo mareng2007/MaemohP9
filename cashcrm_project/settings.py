@@ -65,6 +65,9 @@ INSTALLED_APPS = [
     'cashflow',
     'fleet',
     'mineprogress',
+    'workflow',
+    'teams',
+    'flowchart',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,17 @@
+{% extends 'core/base.html' %}
+{% block title %}File Diff{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h3 class="mb-3">Diff for {{ file.task.title }} v{{ file.version }}</h3>
+  {% if previous %}
+    {% if diff_html %}
+      <div class="table-responsive">{{ diff_html|safe }}</div>
+    {% else %}
+      <pre class="bg-light p-3">{{ diff }}</pre>
+    {% endif %}
+  {% else %}
+    <p>No previous version to diff.</p>
+  {% endif %}
+  <a href="{% url 'workflow:task-detail' file.task.id %}" class="btn btn-secondary mt-3">Back to Task</a>
+</div>
+{% endblock %}

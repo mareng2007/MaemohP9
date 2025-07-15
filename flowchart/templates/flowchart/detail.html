@@ -1,0 +1,22 @@
+{% extends "core/base.html" %}
+{% block title %}{{ object.name }}{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>{{ object.name }}</h2>
+  <a class="btn btn-primary" href="{% url 'flowchart:edit' object.pk %}">New Version</a>
+  <div class="mt-3">
+    <pre class="mermaid">{{ latest.content|default:"" }}</pre>
+  </div>
+  <h5 class="mt-4">Versions</h5>
+  <ul class="list-group">
+    {% for v in versions %}
+      <li class="list-group-item d-flex justify-content-between">
+        v{{ v.version_number }} - {{ v.created_at|date:"Y-m-d H:i" }}
+        <a href="{% url 'flowchart:download' object.pk v.version_number %}" class="btn btn-sm btn-outline-secondary">Download</a>
+      </li>
+    {% endfor %}
+  </ul>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true });</script>
+{% endblock %}

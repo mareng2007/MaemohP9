@@ -34,6 +34,7 @@ urlpatterns = [
     # API endpoints ของแต่ละแอป
     path('api/core/', include('core.urls', namespace='core-api')),           # เช่น /api/core/users/
     path('api/revenue/', include('revenue.urls', namespace='revenue-api')),  # เช่น /api/revenue/jobs/
+    path('api/workflow/', include('workflow.urls', namespace='workflow-api')),
     # path('api/loans/', include('loans.urls', namespace='loans-api')),
     # path('api/payables/', include('payables.urls', namespace='payables-api')),
     # path('api/cashflow/', include('cashflow.urls', namespace='cashflow-api')),
@@ -42,6 +43,9 @@ urlpatterns = [
     
     # Frontend URLs ของแต่ละแอป (Web)
     path('revenue/', include('revenue.urls', namespace='revenue')),
+    path('workflow/', include('workflow.urls', namespace='workflow')),
+    path('teams/', include('teams.urls', namespace='teams')),
+    path('flowchart/', include('flowchart.urls', namespace='flowchart')),
     # path('loans/', include('loans.urls', namespace='loans')),
     # path('payables/', include('payables.urls', namespace='payables')),
     # path('cashflow/', include('cashflow.urls', namespace='cashflow')),
