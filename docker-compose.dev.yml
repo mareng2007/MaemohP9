@@ -113,6 +113,20 @@ services:
     networks:
       - nginx-proxy
 
+superset:
+    image: apache/superset:4.1.0
+    container_name: superset-dev
+    ports:
+      - "8088:8088"
+    environment:
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-supersecret}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - nginx-proxy
   
 
 volumes:

@@ -51,6 +51,8 @@ urlpatterns = [
     # path('cashflow/', include('cashflow.urls', namespace='cashflow')),
     # path('fleet/', include('fleet.urls', namespace='fleet')),
     # path('mineprogress/', include('mineprogress.urls', namespace='mineprogress')),
+
+    path('analytics/', include('analytics.urls')),
 ]
 
 # เสิร์ฟ media ไฟล์เฉพาะตอน DEBUG

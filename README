@@ -1077,7 +1077,7 @@ docker-compose \
  -f docker-compose.dev.yml exec web \
     python manage.py startapp workflow
     
-
+; user permission
 sudo chown -R $(id -u):$(id -g) .
 
 

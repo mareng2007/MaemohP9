@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'workflow',
     'teams',
     'flowchart',
+    'analytics',
 ]
 
 MIDDLEWARE = [
@@ -211,6 +212,10 @@ STATICFILES_DIRS = [
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
+# ที่เก็บไฟล์จริงสำหรับ ETL
+DATA_ROOT = Path(os.getenv('DATA_ROOT', BASE_DIR / 'data'))
+
+
 
 # WhiteNoise config (optional แต่ช่วยให้ compress & cache ดีขึ้น)
 WHITENOISE_AUTOREFRESH = DEBUG
@@ -335,6 +340,16 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.delete_expired_otps',
         'schedule': crontab(hour=2, minute=0),
     },
+
+    'etl_budget_all_every_6h': {
+        'task': 'analytics.tasks.etl_budget_all',
+        'schedule': 6 * 3600,
+    },
+
+    'notify_budget_status_daily_0900': {
+        'task': 'analytics.tasks.notify_budget_status',
+        'schedule': 24 * 3600,  # ตั้งเป็น crontab ได้ถ้าต้อง
+    },
 }
 
 
@@ -373,3 +388,12 @@ else:
 # อ่านค่าจาก .env (Docker หรือ Host จะต้องเซ็ต ENV vars เหล่านี้ไว้)
 ACTIVATION_SCHEME = os.getenv('ACTIVATION_SCHEME', 'http')
 ACTIVATION_DOMAIN = os.getenv('ACTIVATION_DOMAIN', 'localhost:8000')
+
+
+
+# Superset (ถ้าจะฝังในเว็บภายหลัง)
+SUPERSET_BASE_URL = os.getenv('SUPERSET_BASE_URL', 'https://superset.example.com')
+SUPERSET_PUBLIC_DASHBOARD_URL = os.getenv(
+    'SUPERSET_PUBLIC_DASHBOARD_URL',
+    f'{SUPERSET_BASE_URL}/superset/dashboard/p/analytics-overview/'
+)
