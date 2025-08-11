@@ -1081,6 +1081,12 @@ docker-compose \
 sudo chown -R $(id -u):$(id -g) .
 
 
+; สร้างโฟลเดอร์บนโฮสต์ (WSL)
+mkdir -p data
+
+
+; คัดลอกจาก Windows เข้าสู่ WSL
+cp "/mnt/c/Users/MAR_NB/Desktop/Budget.xlsx"  ~/django/MaemohP9/data/raw/
 
 
 # รัน Docker-Compose ในโหมด Prod

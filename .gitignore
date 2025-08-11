@@ -47,8 +47,8 @@ dist/
 Thumbs.db
 
 # ข้อมูลจริง
-data/raw/*
-*.xlsm
+# data/raw/*
+# *.xlsm
 
 # Django collectstatic
 /staticfiles/
