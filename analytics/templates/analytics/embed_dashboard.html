@@ -1,0 +1,52 @@
+{% extends "core/base.html" %}
+{% load static %}
+
+{% block title %}Budget Analytics (Embedded){% endblock %}
+
+{% block extra-css %}
+<style>#mount{width:100%;height:75vh;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden}</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h3 class="mb-0">Budget Analytics (Embedded)</h3>
+    <a href="{% url 'analytics:control_panel' %}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-left me-1"></i> กลับไปหน้า Control
+    </a>
+  </div>
+
+  <div id="mount" class="bg-white shadow-sm"></div>
+</div>
+{% endblock %}
+
+{% block extra-js %}
+<script src="https://unpkg.com/@superset-ui/embedded-sdk"></script>
+<script>
+  (async () => {
+    const mountPoint = document.getElementById("mount");
+    const supersetDomain = "{{ superset_url }}";
+
+    try {
+      const resp = await fetch("{% url 'analytics:superset_token' %}");
+      if (!resp.ok) throw new Error("Cannot fetch guest token");
+      const { token } = await resp.json();
+
+      const embedFn = (window.supersetEmbeddedSdk && window.supersetEmbeddedSdk.embedDashboard);
+      if (!embedFn) throw new Error("Embedded SDK via CDN unavailable");
+
+      await embedFn({
+        id: "{{ dash_id }}",
+        supersetDomain,
+        mountPoint,
+        fetchGuestToken: () => token,
+        dashboardUiConfig: { hideTitle: false, hideChartControls: true, filters: { expanded: true } },
+      });
+    } catch (err) {
+      mountPoint.innerHTML = `<div class="p-4 text-danger">${err}</div>`;
+      console.error(err);
+    }
+  })();
+</script>
+{% endblock %}
+

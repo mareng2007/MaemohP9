@@ -1,32 +1,54 @@
 # version: '3.8'
-services:
 
+services:
   db:
     image: postgres:15
     env_file: .env.prod
     restart: always
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # - ./init-db.sql:/docker-entrypoint-initdb.d/10-init-db.sql:ro
     environment:
       POSTGRES_USER:     ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB:       ${POSTGRES_DB}
-    
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h localhost"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h localhost || exit 1"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 60
+      start_period: 60s
+    networks: [nginx-proxy]
 
-    networks:
-      - nginx-proxy
-
+  db-init:
+    image: postgres:15
+    container_name: maemohp9-db-init-prod
+    env_file: .env.prod
+    depends_on:
+      db: { condition: service_healthy }
+    entrypoint: ["/bin/bash","-lc"]
+    command: >
+      set -e;
+      echo "Waiting for Postgres...";
+      until pg_isready -h db -U "$POSTGRES_USER" -d postgres; do sleep 1; done;
+      echo "Ensuring database superset_meta exists...";
+      psql -h db -U "$POSTGRES_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='superset_meta'" \
+        | grep -q 1 \
+        || psql -h db -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE superset_meta OWNER \"$POSTGRES_USER\" ENCODING 'UTF8' TEMPLATE template0;";
+      echo "Done.";
+    # ⬇️ บรรทัดสำคัญ: กันไม่ให้สร้าง anonymous volume
+    volumes:
+      - type : tmpfs
+        target: /var/lib/postgresql/data
+    networks: [nginx-proxy]
+    restart: "no"
 
   redis:
     image: redis:6
     restart: always
-    networks:
-      - nginx-proxy
+    volumes:
+      - redis_data:/data
+    networks: [nginx-proxy]
 
   web:
     build: .
@@ -36,15 +58,10 @@ services:
       - "VIRTUAL_HOST=${VIRTUAL_HOST}"
       - "LETSENCRYPT_HOST=${LETSENCRYPT_HOST}"
       - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
-    # *** ลบ static_volume ***
-    # - static_volume:/app/staticfiles
-
-    # แต่ถ้าต้องการเก็บไฟล์ user-uploaded (media) ก็ mount ปกติ
     volumes:
       - media_volume:/app/media
-    expose:
-      - "8000"
-
+      - data_volume:/app/data    # 👈 เพิ่ม
+    expose: ["8000"]
     environment:
       - DATABASE_HOST=${DATABASE_HOST}
       - DATABASE_PORT=${DATABASE_PORT}
@@ -57,24 +74,20 @@ services:
       - LETSENCRYPT_HOST=${LETSENCRYPT_HOST}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
       - VIRTUAL_PORT=8000
-      
     depends_on:
-      db:
-          condition: service_healthy
-      redis:
-          condition: service_started
+      db:    { condition: service_healthy }
+      redis: { condition: service_started }
     restart: always
-    networks:
-      - nginx-proxy
+    networks: [nginx-proxy]
 
   celery:
     build: .
     image: maemohp9-celery:prod
     command: celery -A cashcrm_project worker -l info
     env_file: .env.prod
-    # เอา static_volume ออก
     volumes:
       - media_volume:/app/media
+      - data_volume:/app/data    # 👈 เพิ่ม
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
@@ -84,24 +97,19 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
-      redis:
-          condition: service_started
-      db:
-          condition: service_healthy
-      
+      redis: { condition: service_started }
+      db:    { condition: service_healthy }
     restart: always
-    networks:
-      - nginx-proxy
-
+    networks: [nginx-proxy]
 
   celery-beat:
     build: .
     image: maemohp9-celery-beat:prod
     command: celery -A cashcrm_project beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     env_file: .env.prod
-    # เอา static_volume ออก
     volumes:
       - media_volume:/app/media
+      - data_volume:/app/data    # 👈 เพิ่ม
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
@@ -111,36 +119,102 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     depends_on:
-      db:
-        condition: service_healthy
-      redis:            # ถ้าไม่มี healthcheck จะถือว่ามี condition=service_started
-        condition: service_started
+      db:    { condition: service_healthy }
+      redis: { condition: service_started }
     restart: always
-    networks:
-      - nginx-proxy
+    networks: [nginx-proxy]
 
-
-superset:
-    image: apache/superset:4.1.0
+  superset:
+    build: ./superset
     container_name: superset-prod
-    ports:
-      - "8088:8088"
+    # ❌ เอา ports ออก เพื่อให้เข้าผ่าน proxy เท่านั้น
+    # ports: ["8088:8088"]
+    env_file: .env.prod
     environment:
-      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY:-supersecret}
+      SUPERSET_ENV: production
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL}
+      PYTHONPATH: /app/pythonpath
+      GUEST_TOKEN_JWT_SECRET: ${GUEST_TOKEN_JWT_SECRET}
+      SUPERSET_SECRET_KEY: ${SUPERSET_SECRET_KEY}
+      SUPERSET_DATABASE_URI: ${SUPERSET_DATABASE_URI}
+      GUEST_ROLE_NAME: ${GUEST_ROLE_NAME}
+      APP_EMBED_HOSTS: ${APP_EMBED_HOSTS}
+    command: >
+      bash -lc "
+        export SQLALCHEMY_DATABASE_URI='postgresql+psycopg2://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/superset_meta';
+        echo Using SQLALCHEMY_DATABASE_URI=$SQLALCHEMY_DATABASE_URI;
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
+      "
+    volumes:
+      - superset_home_prod:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py:ro
+    
+    labels:
+      - "com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy"
+      - "VIRTUAL_HOST=superset.utrizd.com"
+      - "LETSENCRYPT_HOST=superset.utrizd.com"
+      - "LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}"
+      - "VIRTUAL_PORT=8088"
+
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    networks:
-      - nginx-proxy
-  
+      db:      { condition: service_healthy }
+      db-init: { condition: service_completed_successfully }
+      redis:   { condition: service_started }
+    networks: [nginx-proxy]
+
+  superset-init:
+    build: ./superset
+    env_file: .env.prod
+    environment:
+      SUPERSET_ENV: production
+      # SUPERSET_DATABASE_URI: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/superset_meta
+      SUPERSET_ADMIN_USERNAME: ${SUPERSET_ADMIN_USERNAME}
+      SUPERSET_ADMIN_PASSWORD: ${SUPERSET_ADMIN_PASSWORD}
+      SUPERSET_ADMIN_EMAIL: ${SUPERSET_ADMIN_EMAIL}
+      PYTHONPATH: /app/pythonpath
+      GUEST_TOKEN_JWT_SECRET: ${GUEST_TOKEN_JWT_SECRET}
+      APP_EMBED_HOSTS: ${APP_EMBED_HOSTS}
+    volumes:
+      - superset_home_prod:/app/superset_home
+      - ./superset_config.py:/app/pythonpath/superset_config.py:ro
+    entrypoint: ["/bin/bash","-lc"]
+    command: >
+      bash -lc "
+        export SQLALCHEMY_DATABASE_URI='postgresql+psycopg2://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@db:5432/superset_meta';
+        echo Using SQLALCHEMY_DATABASE_URI=$SQLALCHEMY_DATABASE_URI;
+        superset db upgrade;
+        superset fab create-admin \
+          --username '$${SUPERSET_ADMIN_USERNAME}' \
+          --firstname 'Superset' --lastname 'Admin' \
+          --email '$${SUPERSET_ADMIN_EMAIL}' \
+          --password '$${SUPERSET_ADMIN_PASSWORD}' || true;
+        superset init
+      "
+    depends_on:
+      db:      { condition: service_healthy }
+      db-init: { condition: service_completed_successfully }
+      redis:   { condition: service_started }
+    networks: [nginx-proxy]
+    restart: "no"
+
 
 volumes:
   postgres_data:
-  static_volume:
+    name: maemohp9_postgres_data_prod
+  redis_data:
+    name: maemohp9_redis_data_prod
   media_volume:
+    name: maemohp9_media_prod
+
+  data_volume:
+    name: maemohp9_data_prod
+
+  superset_home_prod:
+    name: maemohp9_superset_home_prod
 
 networks:
   nginx-proxy:
     external: true
+

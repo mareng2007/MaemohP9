@@ -27,10 +27,7 @@ class BudgetActual(models.Model):
     load_batch_id= models.CharField(max_length=40)
 
     class Meta:
-        indexes = [
-            models.Index(fields=["doc_date"]),
-            models.Index(fields=["budget_code"]),
-        ]
+        indexes = [models.Index(fields=["doc_date"]), models.Index(fields=["budget_code"])]
 
 class RemainingSnapshot(models.Model):
     """ตารางสรุปคงเหลือ (materialized) ใช้เป็น Dataset ใน Superset และสำหรับแจ้งเตือน"""
@@ -42,11 +39,17 @@ class RemainingSnapshot(models.Model):
     actual_to_date= models.DecimalField(max_digits=18, decimal_places=2, default=0)
     remaining     = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     usage_pct     = models.DecimalField(max_digits=9,  decimal_places=4, null=True, blank=True)
+    # เพิ่มสำหรับ native filters
+    budget_owner  = models.CharField(max_length=100, blank=True, default="")
+    budget_group  = models.CharField(max_length=100, blank=True, default="")
 
     class Meta:
         indexes = [
             models.Index(fields=["snapshot_at"]),
             models.Index(fields=["budget_year"]),
             models.Index(fields=["usage_pct"]),
+            models.Index(fields=["budget_owner"]),
+            models.Index(fields=["budget_group"]),
         ]
+
 

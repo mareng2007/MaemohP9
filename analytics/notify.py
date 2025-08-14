@@ -1,23 +1,34 @@
+# analytics/notify.py (ปรับปรุง)
 import os
 import pandas as pd
-from django.utils import timezone
+from django.conf import settings
 from analytics.models import RemainingSnapshot
-from linebot import LineBotApi
-from linebot.models import TextSendMessage
+
+# LINE SDK v3
+from linebot.v3.messaging import (
+    Configuration, ApiClient, MessagingApi, PushMessageRequest, TextMessage
+)
 
 def fetch_top_usage(n=10) -> pd.DataFrame:
-    # ใช้ snapshot ล่าสุด
-    latest = (RemainingSnapshot.objects
-              .order_by("-snapshot_at")
-              .values_list("snapshot_at", flat=True)
-              .first())
+    latest = (
+        RemainingSnapshot.objects
+        .order_by("-snapshot_at")
+        .values_list("snapshot_at", flat=True)
+        .first()
+    )
     if not latest:
-        return pd.DataFrame(columns=["budget_code","description","budget_amount","actual_to_date","remaining","usage_pct"])
+        return pd.DataFrame(columns=[
+            "budget_code", "description", "budget_amount",
+            "actual_to_date", "remaining", "usage_pct"
+        ])
 
-    qs = (RemainingSnapshot.objects
-          .filter(snapshot_at=latest)
-          .order_by("-usage_pct")
-          .values("budget_code","description","budget_amount","actual_to_date","remaining","usage_pct")[:n])
+    qs = (
+        RemainingSnapshot.objects
+        .filter(snapshot_at=latest)
+        .order_by("-usage_pct")
+        .values("budget_code", "description", "budget_amount",
+                "actual_to_date", "remaining", "usage_pct")[:n]
+    )
     return pd.DataFrame(list(qs))
 
 def format_message(df: pd.DataFrame, title="Budget Usage Alert") -> str:
@@ -34,9 +45,26 @@ def format_message(df: pd.DataFrame, title="Budget Usage Alert") -> str:
     return "\n".join(lines)
 
 def push_line_message(text: str):
-    token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-    to_id = os.getenv("LINE_TO_ID")
-    if not token or not to_id:
-        raise RuntimeError("ต้องตั้งค่า LINE_CHANNEL_ACCESS_TOKEN และ LINE_TO_ID ใน ENV")
-    api = LineBotApi(token)
-    api.push_message(to_id, TextSendMessage(text=text))
+    """
+    ส่งข้อความหาผู้รับหลายคน (list) จาก settings.LINE_TARGET_IDS
+    - ใช้ push_message รายคน (เรียบง่ายและชัดเจน)
+    """
+    channel_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+    targets = getattr(settings, "LINE_TARGET_IDS", [])
+
+    if not channel_token or not targets:
+        raise RuntimeError("ต้องตั้งค่า LINE_CHANNEL_ACCESS_TOKEN และ LINE_TARGET_IDS ใน ENV/Settings")
+
+    config = Configuration(access_token=channel_token)
+    with ApiClient(config) as client:
+        api = MessagingApi(client)
+        for to_id in targets:
+            to_id = str(to_id).strip()
+            if not to_id:
+                continue
+            api.push_message(
+                PushMessageRequest(
+                    to=to_id,
+                    messages=[TextMessage(text=text)]
+                )
+            )

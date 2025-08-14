@@ -984,6 +984,9 @@ docker network rm nginx-proxy
 ; สร้าง bridge network ใหม่ (driver: bridge คือดีฟอลต์) network นี้ถูกสร้าง ก่อน สั่ง docker compose up ทั้งสองโปรเจ็กต์
 docker network create nginx-proxy
 
+# (ถ้ายังไม่มี external network ชื่อ nginx-proxy ให้สร้างก่อน)
+docker network create nginx-proxy || true
+
 ; เช็คไฟล์ใบรับรอง
 ls data/certs/mining.utrizd.com.*
 
@@ -1076,6 +1079,46 @@ docker-compose \
   --env-file .env.dev \
  -f docker-compose.dev.yml exec web \
     python manage.py startapp workflow
+
+
+# migrate (มีฟิลด์เพิ่มใน RemainingSnapshot)
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec web python manage.py makemigrations analytics
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec web python manage.py migrate
+
+
+docker compose --env-file .env.dev -f docker-compose.dev.yml down -v
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d --build
+
+; เช็คว่าเห็นตัวแปรในคอนเทนเนอร์
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec db bash -lc 'env | grep "^POSTGRES_"'
+
+; สร้าง DB superset_meta
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec db bash -lc \
+'psql -U "$POSTGRES_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='\''superset_meta'\''" \
+ | grep -q 1 || psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE superset_meta OWNER \"$POSTGRES_USER\" ENCODING '\''UTF8'\'' TEMPLATE template0;"'
+
+
+
+; สตาร์ท Superset ปกติ
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d superset
+
+
+; สร้างแอดมิน (ใช้ค่าจาก .env.dev ถ้ามี; ถ้าไม่มี ใส่ตรง ๆ ตามนี้ได้)
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec superset bash -lc '
+  superset db upgrade &&
+  superset fab create-admin \
+    --username "admin" \
+    --firstname "Superset" --lastname "Admin" \
+    --email "mareng2007@gmail.com" \
+    --password "admin1234" &&
+  superset init
+'
+
+
+
+; ตรวจสอบว่ามีผู้ใช้แล้ว:
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec superset bash -lc 'superset fab list-users'
+
     
 ; user permission
 sudo chown -R $(id -u):$(id -g) .
@@ -1133,6 +1176,14 @@ docker compose \
   --env-file .env.prod \
   -f docker-compose.prod.yml \
 stop
+
+
+# 1) ขึ้นทุกอย่าง (db-init จะสร้าง superset_meta ให้อัตโนมัติแล้วจบตัวเอง)
+docker compose --env-file .env.prod -f docker-compose.prod.yml up -d --build
+
+# 2) รัน init Superset (migrate + create-admin + init)
+docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm superset-init
+
 
 
 

@@ -125,8 +125,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            # "hosts": [('localhost', 6379)],
-            "hosts": [('127.0.0.1', 6379)],
+            "hosts": [(os.getenv('REDIS_HOST', 'redis'), int(os.getenv('REDIS_PORT','6379')))],
         },
     },
 }
@@ -272,7 +271,30 @@ REST_FRAMEWORK = {
     ),
 }
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
+
+# อนุญาต origin สำหรับ CORS (เช่น frontend แยกโดเมน หรือกรณีที่ต้องการเรียก API จากที่อื่น)
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # dev ผ่อน, prod เข้ม
+
+# อ่านจาก ENV: CORS_ALLOWED_ORIGINS="https://mining.utrizd.com,https://another.example"
+_cors_from_env = os.getenv('CORS_ALLOWED_ORIGINS', '')
+if _cors_from_env:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_from_env.split(',') if o.strip()]
+elif not DEBUG:
+    # ถ้า prod และไม่ได้ตั้งค่าไว้ ให้ fallback เป็นโดเมนของเว็บตัวเอง
+    CORS_ALLOWED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h]
+
+# CSRF (สำหรับฟอร์ม/คุกกี้) — ผูกกับโดเมนจริงใน prod
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = []
+else:
+    # ถ้าตั้งใน ENV มาก็ใช้, ไม่งั้น default จาก ALLOWED_HOSTS
+    _csrf_env = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+    if _csrf_env:
+        CSRF_TRUSTED_ORIGINS = [u.strip() for u in _csrf_env.split(',') if u.strip()]
+    else:
+        CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h]
+        
 
 # CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
 # CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
@@ -286,7 +308,7 @@ CELERY_RESULT_BACKEND= CELERY_BROKER_URL
 
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TASK_SELERIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
 
 
 CELERY_TIMEZONE = "Asia/Bangkok"
@@ -348,7 +370,7 @@ CELERY_BEAT_SCHEDULE = {
 
     'notify_budget_status_daily_0900': {
         'task': 'analytics.tasks.notify_budget_status',
-        'schedule': 24 * 3600,  # ตั้งเป็น crontab ได้ถ้าต้อง
+        'schedule': crontab(hour=9, minute=0),  # ตั้งเป็น crontab ได้ถ้าต้อง
     },
 }
 
@@ -391,9 +413,30 @@ ACTIVATION_DOMAIN = os.getenv('ACTIVATION_DOMAIN', 'localhost:8000')
 
 
 
-# Superset (ถ้าจะฝังในเว็บภายหลัง)
-SUPERSET_BASE_URL = os.getenv('SUPERSET_BASE_URL', 'https://superset.example.com')
-SUPERSET_PUBLIC_DASHBOARD_URL = os.getenv(
-    'SUPERSET_PUBLIC_DASHBOARD_URL',
-    f'{SUPERSET_BASE_URL}/superset/dashboard/p/analytics-overview/'
-)
+# # Superset (ถ้าจะฝังในเว็บภายหลัง)
+# SUPERSET_BASE_URL = os.getenv('SUPERSET_BASE_URL', 'https://superset.example.com')
+# SUPERSET_PUBLIC_DASHBOARD_URL = os.getenv(
+#     'SUPERSET_PUBLIC_DASHBOARD_URL',
+#     f'{SUPERSET_BASE_URL}/superset/dashboard/p/analytics-overview/'
+# )
+
+
+# Superset Embedded (Django side)
+SUPERSET_BASE_URL = os.getenv("SUPERSET_BASE_URL", "http://localhost:8088")
+SUPERSET_EMBED_DASHBOARD_ID = os.getenv("SUPERSET_EMBED_DASHBOARD_ID", "")
+GUEST_TOKEN_JWT_SECRET = os.getenv("GUEST_TOKEN_JWT_SECRET", "change-me")
+
+# API (Actuals >= May'25)
+API_PSL_RECORDS_URL = os.getenv("API_PSL_RECORDS_URL")
+API_FIXED_TOKEN = os.getenv("API_FIXED_TOKEN")
+
+
+# # (Optional) Logging คร่าวๆ
+# LOGGING = {
+#     "version": 1,
+#     "disable_existing_loggers": False,
+#     "handlers": {"console": {"class": "logging.StreamHandler"}},
+#     "loggers": {
+#         "analytics": {"handlers": ["console"], "level": "INFO"},
+#     },
+# }
