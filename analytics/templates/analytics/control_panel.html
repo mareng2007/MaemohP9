@@ -14,16 +14,16 @@
 
   {% if messages %}
     {% for m in messages %}
-      <div class="alert alert-success">{{ m }}</div>
+      <div class="alert alert-{{ m.tags|default:'info' }} mb-3">{{ m }}</div>
     {% endfor %}
   {% endif %}
 
   <div class="card shadow-sm mb-4">
     <div class="card-body">
       <h5 class="card-title mb-3">ETL Manual Run</h5>
-      <form method="post">
+      <form method="post" action="{% url 'analytics:control_panel' %}">
         {% csrf_token %}
-        <button class="btn btn-primary">
+        <button class="btn btn-primary" type="submit">
           <i class="fas fa-play me-1"></i> รัน ETL ตอนนี้
         </button>
         <span class="text-muted ms-2">อ่าน Budget.xlsx + Actual_old.csv + API ➜ RemainingSnapshot</span>
@@ -44,5 +44,7 @@
   </div>
 </div>
 {% endblock %}
+
+
 
 

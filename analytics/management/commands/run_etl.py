@@ -5,5 +5,7 @@ class Command(BaseCommand):
     help = "Run full ETL (Budget.xlsx + Actual_old.csv + API) and refresh remaining snapshot."
 
     def handle(self, *args, **options):
-        etl_budget_all.apply(args=[], kwargs={}).get()
-        self.stdout.write(self.style.SUCCESS("ETL สำเร็จ และอัปเดตสรุปคงเหลือแล้ว"))
+        # รันแบบ synchronous ผ่าน Celery (apply) เพื่อให้โชว์ error บน CLI ได้
+        res = etl_budget_all.apply(args=[], kwargs={}).get()
+        self.stdout.write(self.style.SUCCESS(f"ETL สำเร็จ: {res}"))
+

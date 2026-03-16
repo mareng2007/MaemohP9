@@ -1,10 +1,8 @@
-# analytics/notify.py (ปรับปรุง)
 import os
 import pandas as pd
 from django.conf import settings
 from analytics.models import RemainingSnapshot
 
-# LINE SDK v3
 from linebot.v3.messaging import (
     Configuration, ApiClient, MessagingApi, PushMessageRequest, TextMessage
 )
@@ -45,10 +43,6 @@ def format_message(df: pd.DataFrame, title="Budget Usage Alert") -> str:
     return "\n".join(lines)
 
 def push_line_message(text: str):
-    """
-    ส่งข้อความหาผู้รับหลายคน (list) จาก settings.LINE_TARGET_IDS
-    - ใช้ push_message รายคน (เรียบง่ายและชัดเจน)
-    """
     channel_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
     targets = getattr(settings, "LINE_TARGET_IDS", [])
 
@@ -68,3 +62,4 @@ def push_line_message(text: str):
                     messages=[TextMessage(text=text)]
                 )
             )
+

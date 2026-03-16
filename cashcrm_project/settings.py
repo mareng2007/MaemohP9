@@ -440,3 +440,11 @@ API_FIXED_TOKEN = os.getenv("API_FIXED_TOKEN")
 #         "analytics": {"handlers": ["console"], "level": "INFO"},
 #     },
 # }
+
+# ถ้ามี SECURE_REFERRER_POLICY อยู่แล้ว จะใช้ค่านั้นเป็นค่าเดียวกันก็ได้
+EMBED_REFERRER_POLICY = os.getenv(
+    "EMBED_REFERRER_POLICY",
+    # fallback ไปที่ SECURE_REFERRER_POLICY หรือค่า default
+    getattr(globals().get("SECURE_REFERRER_POLICY", None), "__str__", lambda: None)()  # ถ้ามี
+    or "strict-origin-when-cross-origin"
+)

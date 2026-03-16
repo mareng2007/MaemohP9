@@ -1119,6 +1119,9 @@ docker compose --env-file .env.dev -f docker-compose.dev.yml exec superset bash 
 ; ตรวจสอบว่ามีผู้ใช้แล้ว:
 docker compose --env-file .env.dev -f docker-compose.dev.yml exec superset bash -lc 'superset fab list-users'
 
+; เปิด logs:
+docker compose --env-file .env.dev -f docker-compose.dev.yml logs -f web celery
+
     
 ; user permission
 sudo chown -R $(id -u):$(id -g) .
@@ -1288,3 +1291,33 @@ sudo systemctl start maemohp9.service (หรือรีบูทเครื�
 ใช้ restart: always ใน docker-compose.yml
 
 ใช้ systemd บนโฮสต์รัน docker-compose up -d ตอนบูท
+
+
+; สรุปการใช้งาน superset
+; 1. สร้าง database
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec db bash -lc \
+'psql -U "$POSTGRES_USER" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='\''superset_meta'\''" \
+ | grep -q 1 || psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE superset_meta OWNER \"$POSTGRES_USER\" ENCODING '\''UTF8'\'' TEMPLATE template0;"'
+
+; 2. run superset
+docker compose --env-file .env.dev -f docker-compose.dev.yml up -d superset
+
+
+
+; 3. สร้างแอดมิน (ใช้ค่าจาก .env.dev ถ้ามี; ถ้าไม่มี ใส่ตรง ๆ ตามนี้ได้)
+docker compose --env-file .env.dev -f docker-compose.dev.yml exec superset bash -lc '
+  superset db upgrade &&
+  superset fab create-admin \
+    --username "admin" \
+    --firstname "Superset" --lastname "Admin" \
+    --email "mareng2007@gmail.com" \
+    --password "admin1234" &&
+  superset init
+'
+
+
+; 4 เพิ่ม Database ใหม่ (ชี้ไปที่ cashcrmDB)
+; เปิด url เพื่อ login http://localhost:8088/login/
+Display Name: AnalyticsData
+SQLAlchemy URI:
+postgresql+psycopg2://mareng2007:<รหัสผ่านจริงของคุณ>@db:5432/cashcrmDB
